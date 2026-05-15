@@ -13,8 +13,8 @@ import {
   message,
   Tag,
   DatePicker,
-  Cascader,
-  Select
+  Select,
+  AutoComplete
 } from 'antd';
 import {
   EyeOutlined,
@@ -29,33 +29,27 @@ import {
   CalendarOutlined,
   NumberOutlined,
   ThunderboltOutlined,
-  SafetyCertificateOutlined,
-  EnvironmentOutlined,
   FileTextOutlined,
   PictureOutlined,
   LinkOutlined,
   CameraOutlined,
-  CheckCircleOutlined,
   GlobalOutlined,
   PlusOutlined,
   CloseOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-const { TextArea } = Input;
 const { Text } = Typography;
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 650;
 
-// 照片参数
 const PHOTO_X = 70;
 const PHOTO_Y = 160;
 const PHOTO_WIDTH = 220;
 const PHOTO_HEIGHT = 275;
 
-// 能力选项数据
-const abilityOptions = [
+const ability_options = [
   {
     value: '御灵系',
     label: '御灵系',
@@ -78,39 +72,34 @@ const abilityOptions = [
   },
   {
     value: '造物系',
-    label: '造物系',
+    label: '造物系'
   },
   {
     value: '生灵系',
-    label: '生灵系',
+    label: '生灵系'
   },
   {
     value: '心灵系',
-    label: '心灵系',
+    label: '心灵系'
   },
   {
-    value: '强化系',
-    label: '强化系',
+    value: '乱七八糟系',
+    label: '乱七八糟系'
   },
   {
-    value: '变化系',
-    label: '变化系',
-  },
-  {
-    value: '特质系',
-    label: '特质系',
-  },
+    value: '',
+    label: '其他'
+  }
 ];
 
 function App() {
   const [form] = Form.useForm();
-  const canvasRef = useRef(null);
-  const [currentBg, setCurrentBg] = useState(null);
-  const [photoImage, setPhotoImage] = useState(null);
-  const [selectedAbilities, setSelectedAbilities] = useState([]);
+  const canvas_ref = useRef(null);
+  const [current_bg, set_current_bg] = useState(null);
+  const [photo_image, set_photo_image] = useState(null);
+  const [selected_abilities, set_selected_abilities] = useState([]);
 
-  // 绘制圆角矩形路径
-  const roundRect = useCallback((ctx, x, y, w, h, r) => {
+  const round_rect = useCallback((ctx, x, y, w, h, r) => {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.lineTo(x + w - r, y);
@@ -124,7 +113,7 @@ function App() {
     ctx.closePath();
   }, []);
 
-  const drawWatermark = useCallback((ctx) => {
+  const draw_watermark = useCallback((ctx) => {
     const grad = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     grad.addColorStop(0, 'rgba(180, 220, 150, 0.08)');
     grad.addColorStop(0.3, 'rgba(220, 240, 180, 0.15)');
@@ -136,14 +125,6 @@ function App() {
 
     ctx.font = 'bold 28px "Segoe UI", "Microsoft YaHei"';
     ctx.fillStyle = 'rgba(100, 160, 80, 0.2)';
-    // ctx.fillText('众', CANVAS_WIDTH / 2 - 80, CANVAS_HEIGHT / 2 - 30);
-    // ctx.fillText('生', CANVAS_WIDTH / 2 - 30, CANVAS_HEIGHT / 2 - 30);
-    // ctx.fillText('之', CANVAS_WIDTH / 2 + 20, CANVAS_HEIGHT / 2 - 30);
-    // ctx.fillText('门', CANVAS_WIDTH / 2 + 70, CANVAS_HEIGHT / 2 - 30);
-
-    // ctx.font = 'bold 16px "Segoe UI"';
-    // ctx.fillStyle = 'rgba(100, 160, 80, 0.18)';
-    // ctx.fillText('THE GATE OF ALL BEINGS', CANVAS_WIDTH / 2 - 120, CANVAS_HEIGHT / 2 + 20);
 
     for (let i = 0; i < 60; i++) {
       ctx.fillStyle = `rgba(150, 200, 100, ${Math.random() * 0.15})`;
@@ -151,23 +132,22 @@ function App() {
     }
   }, []);
 
-  const drawMultilineText = useCallback((ctx, text, x, y, lineHeight) => {
+  const draw_multiline_text = useCallback((ctx, text, x, y, line_height) => {
     if (!text) return y;
     const lines = text.split(/\r?\n/);
-    let currentY = y;
+    let current_y = y;
     for (let line of lines) {
       if (line.trim() === '' && lines.length > 1) {
-        currentY += lineHeight * 0.5;
+        current_y += line_height * 0.5;
         continue;
       }
-      ctx.fillText(line, x, currentY);
-      currentY += lineHeight;
+      ctx.fillText(line, x, current_y);
+      current_y += line_height;
     }
-    return currentY;
+    return current_y;
   }, []);
 
-  // 绘制照片
-  const drawPhoto = useCallback((ctx) => {
+  const draw_photo = useCallback((ctx) => {
     const radius = 8;
     ctx.save();
 
@@ -176,7 +156,7 @@ function App() {
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
 
-    roundRect(ctx, PHOTO_X - 4, PHOTO_Y - 4, PHOTO_WIDTH + 8, PHOTO_HEIGHT + 8, radius + 2);
+    round_rect(ctx, PHOTO_X - 4, PHOTO_Y - 4, PHOTO_WIDTH + 8, PHOTO_HEIGHT + 8, radius + 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
 
@@ -185,32 +165,32 @@ function App() {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
-    if (photoImage) {
-      roundRect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
+    if (photo_image) {
+      round_rect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
       ctx.save();
       ctx.clip();
 
-      const imgRatio = photoImage.width / photoImage.height;
-      const boxRatio = PHOTO_WIDTH / PHOTO_HEIGHT;
+      const img_ratio = photo_image.width / photo_image.height;
+      const box_ratio = PHOTO_WIDTH / PHOTO_HEIGHT;
 
-      let drawWidth, drawHeight, drawX, drawY;
+      let draw_width, draw_height, draw_x, draw_y;
 
-      if (imgRatio > boxRatio) {
-        drawHeight = PHOTO_HEIGHT;
-        drawWidth = PHOTO_HEIGHT * imgRatio;
-        drawX = PHOTO_X - (drawWidth - PHOTO_WIDTH) / 2;
-        drawY = PHOTO_Y;
+      if (img_ratio > box_ratio) {
+        draw_height = PHOTO_HEIGHT;
+        draw_width = PHOTO_HEIGHT * img_ratio;
+        draw_x = PHOTO_X - (draw_width - PHOTO_WIDTH) / 2;
+        draw_y = PHOTO_Y;
       } else {
-        drawWidth = PHOTO_WIDTH;
-        drawHeight = PHOTO_WIDTH / imgRatio;
-        drawX = PHOTO_X;
-        drawY = PHOTO_Y - (drawHeight - PHOTO_HEIGHT) / 2;
+        draw_width = PHOTO_WIDTH;
+        draw_height = PHOTO_WIDTH / img_ratio;
+        draw_x = PHOTO_X;
+        draw_y = PHOTO_Y - (draw_height - PHOTO_HEIGHT) / 2;
       }
 
-      ctx.drawImage(photoImage, drawX, drawY, drawWidth, drawHeight);
+      ctx.drawImage(photo_image, draw_x, draw_y, draw_width, draw_height);
       ctx.restore();
     } else {
-      roundRect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
+      round_rect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
       ctx.fillStyle = '#e8e8e8';
       ctx.fill();
       ctx.fillStyle = '#8c8c8c';
@@ -220,22 +200,20 @@ function App() {
       ctx.textAlign = 'start';
     }
 
-    roundRect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
+    round_rect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
     ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.restore();
-  }, [photoImage, roundRect]);
+  }, [photo_image, round_rect]);
 
-  // 格式化能力文本用于画布显示
-  const formatAbilityText = useCallback((abilities) => {
+  const format_ability_text = useCallback((abilities) => {
     if (!abilities || abilities.length === 0) return '';
     
     return abilities.map(ability => {
       if (Array.isArray(ability) && ability.length > 0) {
-        // 处理级联选择的值：[系别, 具体能力]
-        if (ability.length >= 2) {
+        if (ability.length >= 2 && ability[1]) {
           return `${ability[0]}·${ability[1]}`;
         }
         return ability[0];
@@ -244,34 +222,34 @@ function App() {
     }).join('\n');
   }, []);
 
-  const drawCard = useCallback((ctx) => {
+  const draw_card = useCallback((ctx) => {
     const values = form.getFieldsValue();
     const {
       name = '',
       race = '',
       guild = '',
       position = '',
-      certNumber = ''
+      cert_number = ''
     } = values;
 
-    let issueDate = '';
-    if (values.issueDate) {
-      if (typeof values.issueDate === 'object' && values.issueDate.format) {
-        issueDate = values.issueDate.format('YYYY-MM');
-      } else if (values.issueDate instanceof Date) {
-        const d = values.issueDate;
-        issueDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    let issue_date = '';
+    if (values.issue_date) {
+      if (typeof values.issue_date === 'object' && values.issue_date.format) {
+        issue_date = values.issue_date.format('YYYY-MM');
+      } else if (values.issue_date instanceof Date) {
+        const d = values.issue_date;
+        issue_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       } else {
-        issueDate = String(values.issueDate);
+        issue_date = String(values.issue_date);
       }
     }
 
-    const lineageText = formatAbilityText(selectedAbilities);
+    const lineage_text = format_ability_text(selected_abilities);
 
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    if (currentBg) {
-      ctx.drawImage(currentBg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (current_bg) {
+      ctx.drawImage(current_bg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     } else {
       const grad = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       grad.addColorStop(0, '#e9f0e6');
@@ -280,7 +258,7 @@ function App() {
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     }
 
-    drawWatermark(ctx);
+    draw_watermark(ctx);
 
     ctx.font = 'bold 40px "Times New Roman", "思源黑体"';
     ctx.fillStyle = '#3b5c2a';
@@ -289,175 +267,188 @@ function App() {
     ctx.fillStyle = '#5e7c48';
     ctx.fillText('CANGNAN GUILD', 42, 105);
 
-    drawPhoto(ctx);
-    const startX = 420;
-    let currentY = 165;
-    const labelFont = 'bold 20px "Segoe UI", "PingFang SC"';
-    const valueFont = 'bold 26px "Segoe UI", "Microsoft YaHei"';
-    const smallGap = 68;
+    draw_photo(ctx);
+    const start_x = 420;
+    let current_y = 165;
+    const label_font = 'bold 20px "Segoe UI", "PingFang SC"';
+    const value_font = 'bold 26px "Segoe UI", "Microsoft YaHei"';
+    const small_gap = 68;
 
-    ctx.font = labelFont;
+    ctx.font = label_font;
     ctx.fillStyle = '#2a5a3a';
-    ctx.fillText('姓名 / Name', startX, currentY);
-    ctx.font = valueFont;
+    ctx.fillText('姓名 / Name', start_x, current_y);
+    ctx.font = value_font;
     ctx.fillStyle = '#1a3a28';
-    ctx.fillText(name || '—', startX, currentY + 38);
-    currentY += smallGap;
+    ctx.fillText(name || '—', start_x, current_y + 38);
+    current_y += small_gap;
 
-    ctx.font = labelFont;
+    ctx.font = label_font;
     ctx.fillStyle = '#2a5a3a';
-    ctx.fillText('种族 / Race', startX, currentY);
-    ctx.fillText('隶属会馆 / Guild', startX + 260, currentY);
-    ctx.font = valueFont;
+    ctx.fillText('种族 / Race', start_x, current_y);
+    ctx.fillText('隶属会馆 / Guild', start_x + 260, current_y);
+    ctx.font = value_font;
     ctx.fillStyle = '#1a3a28';
-    ctx.fillText(race || '—', startX, currentY + 38);
-    ctx.fillText(guild || '—', startX + 260, currentY + 38);
-    currentY += smallGap;
+    ctx.fillText(race || '—', start_x, current_y + 38);
+    ctx.fillText(guild || '—', start_x + 260, current_y + 38);
+    current_y += small_gap;
 
-    ctx.font = labelFont;
+    ctx.font = label_font;
     ctx.fillStyle = '#2a5a3a';
-    ctx.fillText('工作 / Work', startX, currentY);
-    ctx.fillText('签发日期 / Date', startX + 260, currentY);
-    ctx.font = valueFont;
+    ctx.fillText('工作 / Work', start_x, current_y);
+    ctx.fillText('签发日期 / Date', start_x + 260, current_y);
+    ctx.font = value_font;
     ctx.fillStyle = '#1a3a28';
-    ctx.fillText(position || '—', startX, currentY + 38);
-    ctx.fillText(issueDate || '—', startX + 260, currentY + 38);
-    currentY += smallGap;
+    ctx.fillText(position || '—', start_x, current_y + 38);
+    ctx.fillText(issue_date || '—', start_x + 260, current_y + 38);
+    current_y += small_gap;
 
-    ctx.font = labelFont;
+    ctx.font = label_font;
     ctx.fillStyle = '#2a5a3a';
-    ctx.fillText('能力 / Lineage', startX, currentY);
-    ctx.fillText('签发机关 / Authority', startX + 260, currentY);
-    ctx.font = valueFont;
+    ctx.fillText('能力 / Lineage', start_x, current_y);
+    ctx.fillText('签发机关 / Authority', start_x + 260, current_y);
+    ctx.font = value_font;
     ctx.fillStyle = '#1a3a28';
-    const abilityEndY = drawMultilineText(ctx, lineageText || '—', startX, currentY + 38, 36);
-    ctx.fillText('妖灵会馆总会馆', startX + 260, currentY + 38);
-    currentY = Math.max(abilityEndY + 25, currentY + 70);
+    const ability_end_y = draw_multiline_text(ctx, lineage_text || '—', start_x, current_y + 38, 36);
+    ctx.fillText('妖灵会馆总会馆', start_x + 260, current_y + 38);
+    current_y = Math.max(ability_end_y + 25, current_y + 70);
 
-    ctx.font = labelFont;
+    ctx.font = label_font;
     ctx.fillStyle = '#1a3a28';
-    ctx.fillText(`编号 / Number`, startX - 385, CANVAS_HEIGHT - 110);
-    ctx.font = valueFont;
+    ctx.fillText(`编号 / Number`, start_x - 385, CANVAS_HEIGHT - 110);
+    ctx.font = value_font;
     ctx.fillStyle = '#2a5a3a';
-    ctx.fillText(`${certNumber || 'LXXIII'}`, startX - 385, CANVAS_HEIGHT - 80);
+    ctx.fillText(`${cert_number || 'LXXIII'}`, start_x - 385, CANVAS_HEIGHT - 80);
     ctx.font = 'italic 20px "楷体", "KaiTi"';
     ctx.fillStyle = '#1a3a28';
     ctx.fillText('', CANVAS_WIDTH - 110, CANVAS_HEIGHT - 80);
 
-  }, [form, currentBg, photoImage, selectedAbilities, drawWatermark, drawMultilineText, drawPhoto, formatAbilityText]);
+  }, [form, current_bg, photo_image, selected_abilities, draw_watermark, draw_multiline_text, draw_photo, format_ability_text]);
 
-  const initCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
+  const init_canvas = useCallback(() => {
+    const canvas = canvas_ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    drawCard(ctx);
-  }, [drawCard]);
+    draw_card(ctx);
+  }, [draw_card]);
 
   useEffect(() => {
-    initCanvas();
-  }, [initCanvas]);
+    init_canvas();
+  }, [init_canvas]);
 
-  const handleFormChange = useCallback(() => {
-    initCanvas();
-  }, [initCanvas]);
+  const handle_form_change = useCallback(() => {
+    init_canvas();
+  }, [init_canvas]);
 
-  const handleAddAbility = useCallback(() => {
-    setSelectedAbilities(prev => [...prev, null]);
+  const handle_add_ability = useCallback(() => {
+    set_selected_abilities(prev => [...prev, null]);
   }, []);
 
-  const handleAbilityChange = useCallback((index, value) => {
-    setSelectedAbilities(prev => {
-      const newAbilities = [...prev];
-      newAbilities[index] = value;
-      return newAbilities;
+  const handle_ability_change = useCallback((index, value) => {
+    set_selected_abilities(prev => {
+      const new_abilities = [...prev];
+      new_abilities[index] = value;
+      return new_abilities;
     });
   }, []);
 
-  const handleRemoveAbility = useCallback((index) => {
-    setSelectedAbilities(prev => {
-      const newAbilities = prev.filter((_, i) => i !== index);
-      return newAbilities;
+  const handle_remove_ability = useCallback((index) => {
+    set_selected_abilities(prev => {
+      const new_abilities = prev.filter((_, i) => i !== index);
+      return new_abilities;
     });
-    setTimeout(() => initCanvas(), 50);
-  }, [initCanvas]);
+    setTimeout(() => init_canvas(), 50);
+  }, [init_canvas]);
 
   useEffect(() => {
-    initCanvas();
-  }, [selectedAbilities, initCanvas]);
+    init_canvas();
+  }, [selected_abilities, init_canvas]);
 
-  const handleDownload = useCallback(() => {
-    const canvas = canvasRef.current;
+  const handle_download = useCallback(() => {
+    const canvas = canvas_ref.current;
     if (!canvas) {
       message.error('画布未加载');
       return;
     }
     const values = form.getFieldsValue();
-    const fileName = `Cangnan_${values.name || 'card'}.png`;
+    const file_name = `Cangnan_${values.name || 'card'}.png`;
     const link = document.createElement('a');
-    link.download = fileName;
+    link.download = file_name;
     link.href = canvas.toDataURL('image/png');
     link.click();
     message.success('证件已保存');
   }, [form]);
 
-  const loadBgFromUrl = useCallback((url) => {
+  const load_bg_from_url = useCallback((url) => {
     if (!url) {
-      setCurrentBg(null);
-      setTimeout(() => initCanvas(), 50);
+      set_current_bg(null);
+      setTimeout(() => init_canvas(), 50);
       return;
     }
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
-      setCurrentBg(img);
-      setTimeout(() => initCanvas(), 50);
+      set_current_bg(img);
+      setTimeout(() => init_canvas(), 50);
     };
     img.onerror = () => {
-      setCurrentBg(null);
+      set_current_bg(null);
       message.warning('背景图片加载失败，已切换为纯色背景');
-      setTimeout(() => initCanvas(), 50);
+      setTimeout(() => init_canvas(), 50);
     };
     img.src = url;
-  }, [initCanvas]);
+  }, [init_canvas]);
 
-  const handleBgUpload = useCallback((file) => {
+  const handle_bg_upload = useCallback((file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        setCurrentBg(img);
-        form.setFieldsValue({ bgUrl: e.target.result });
-        setTimeout(() => initCanvas(), 50);
+        set_current_bg(img);
+        form.setFieldsValue({ bg_url: e.target.result });
+        setTimeout(() => init_canvas(), 50);
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
     return false;
-  }, [form, initCanvas]);
+  }, [form, init_canvas]);
 
-  const handlePhotoUpload = useCallback((file) => {
+  const handle_photo_upload = useCallback((file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        setPhotoImage(img);
+        set_photo_image(img);
         message.success('照片已上传');
-        setTimeout(() => initCanvas(), 50);
+        setTimeout(() => init_canvas(), 50);
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
     return false;
-  }, [initCanvas]);
+  }, [init_canvas]);
 
-  const handleRemovePhoto = useCallback(() => {
-    setPhotoImage(null);
+  const handle_remove_photo = useCallback(() => {
+    set_photo_image(null);
     message.info('照片已移除');
-    setTimeout(() => initCanvas(), 50);
-  }, [initCanvas]);
+    setTimeout(() => init_canvas(), 50);
+  }, [init_canvas]);
 
-  
-  
+  const get_all_ability_options = useCallback(() => {
+    const options = [];
+    ability_options.forEach(category => {
+      if (category.children) {
+        category.children.forEach(child => {
+          options.push({
+            value: child.value,
+            label: `${category.label}·${child.label}`
+          });
+        });
+      }
+    });
+    return options;
+  }, []);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -468,7 +459,6 @@ function App() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       <div style={{ width: '100%', maxWidth: 1200 }}>
-        {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
             <IdcardOutlined style={{ fontSize: 26, color: '#3e8868' }} />
@@ -479,7 +469,6 @@ function App() {
         </div>
 
         <Row gutter={[32, 32]}>
-          {/* 左侧表单 */}
           <Col xs={24} lg={10}>
             <Card
               bordered={false}
@@ -509,19 +498,18 @@ function App() {
                 <Form
                   form={form}
                   layout="vertical"
-                  onValuesChange={handleFormChange}
+                  onValuesChange={handle_form_change}
                   initialValues={{
                     name: '罗小黑',
                     race: '妖精',
                     guild: '苍南会馆',
                     position: '普通居民',
-                    issueDate: dayjs('2025-05', 'YYYY-MM'),
-                    certNumber: 'LXXIII',
-                    bgUrl: ''
+                    issue_date: dayjs('2025-05', 'YYYY-MM'),
+                    cert_number: 'LXXIII',
+                    bg_url: ''
                   }}
                   style={{ marginBottom: 0 }}
                 >
-                  {/* 证件照片上传 */}
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                       <CameraOutlined style={{ fontSize: 14, color: '#595959' }} />
@@ -533,7 +521,7 @@ function App() {
 
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                       <Upload
-                        beforeUpload={handlePhotoUpload}
+                        beforeUpload={handle_photo_upload}
                         showUploadList={false}
                         accept="image/*"
                       >
@@ -544,14 +532,14 @@ function App() {
                             borderColor: '#d9d9d9'
                           }}
                         >
-                          {photoImage ? '更换照片' : '上传照片'}
+                          {photo_image ? '更换照片' : '上传照片'}
                         </Button>
                       </Upload>
 
-                      {photoImage && (
+                      {photo_image && (
                         <Button
                           danger
-                          onClick={handleRemovePhoto}
+                          onClick={handle_remove_photo}
                           style={{ borderRadius: 6 }}
                         >
                           移除照片
@@ -600,7 +588,7 @@ function App() {
                     <Col span={12}>
                       <Form.Item label={
                         <span><CalendarOutlined style={{ marginRight: 4 }} />签发日期</span>
-                      } name="issueDate">
+                      } name="issue_date">
                         <DatePicker
                           picker="month"
                           format="YYYY-MM"
@@ -612,13 +600,12 @@ function App() {
                     <Col span={12}>
                       <Form.Item label={
                         <span><NumberOutlined style={{ marginRight: 4 }} />证件编号</span>
-                      } name="certNumber">
+                      } name="cert_number">
                         <Input placeholder="LXXIII" style={{ borderRadius: 6 }} />
                       </Form.Item>
                     </Col>
                   </Row>
 
-                  {/* 能力选择 */}
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ 
                       display: 'flex', 
@@ -634,7 +621,7 @@ function App() {
                       </div>
                     </div>
 
-                    {selectedAbilities.map((ability, index) => (
+                    {selected_abilities.map((ability, index) => (
                       <div 
                         key={index} 
                         style={{ 
@@ -648,25 +635,49 @@ function App() {
                           border: '1px solid #f0f0f0'
                         }}
                       >
-                        <Cascader
-                          value={ability}
-                          onChange={(value) => handleAbilityChange(index, value)}
-                          options={abilityOptions}
-                          placeholder="选择能力系别"
-                          style={{ flex: 1, borderRadius: 6 }}
-                          allowClear={false}
-                          changeOnSelect
-                          expandTrigger="hover"
-                          displayRender={(labels) => {
-                            if (labels.length === 1) return labels[0];
-                            return labels.join(' · ');
+                        <Select
+                          value={ability ? ability[0] : undefined}
+                          onChange={(value) => {
+                            const current_ability = ability || [null, null];
+                            handle_ability_change(index, [value, current_ability[1]]);
                           }}
+                          placeholder="选择系别"
+                          style={{ width: 130, borderRadius: 6 }}
+                        >
+                          {ability_options.map(option => (
+                            <Select.Option key={option.value} value={option.value}>
+                              {option.label}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                        
+                        <AutoComplete
+                          value={ability ? ability[1] : undefined}
+                          onChange={(value) => {
+                            const current_ability = ability || [null, null];
+                            handle_ability_change(index, [current_ability[0], value]);
+                          }}
+                          placeholder="输入或选择具体能力"
+                          style={{ flex: 1, borderRadius: 6 }}
+                          options={
+                            ability && ability[0]
+                              ? (ability_options.find(opt => opt.value === ability[0])?.children || []).map(child => ({
+                                  value: child.value,
+                                  label: child.label
+                                }))
+                              : get_all_ability_options()
+                          }
+                          allowClear
+                          filterOption={(input_value, option) =>
+                            option.value.toLowerCase().indexOf(input_value.toLowerCase()) !== -1
+                          }
                         />
+                        
                         <Button
                           type="text"
                           danger
                           icon={<CloseOutlined />}
-                          onClick={() => handleRemoveAbility(index)}
+                          onClick={() => handle_remove_ability(index)}
                           style={{ borderRadius: 6 }}
                           size="small"
                         />
@@ -675,7 +686,7 @@ function App() {
 
                     <Button
                       type="dashed"
-                      onClick={handleAddAbility}
+                      onClick={handle_add_ability}
                       block
                       icon={<PlusOutlined />}
                       style={{
@@ -683,7 +694,7 @@ function App() {
                         height: 36,
                         borderColor: '#d9d9d9',
                         color: '#595959',
-                        marginTop: selectedAbilities.length > 0 ? 4 : 0
+                        marginTop: selected_abilities.length > 0 ? 4 : 0
                       }}
                     >
                       添加能力
@@ -704,14 +715,14 @@ function App() {
                       支持输入图片URL或上传本地文件
                     </div>
 
-                    <Form.Item name="bgUrl" style={{ marginBottom: 12 }}>
+                    <Form.Item name="bg_url" style={{ marginBottom: 12 }}>
                       <Input
                         prefix={<LinkOutlined style={{ color: '#bfbfbf' }} />}
                         placeholder="输入图片URL地址"
                         style={{ borderRadius: 6 }}
                         onBlur={(e) => {
                           if (e.target.value) {
-                            loadBgFromUrl(e.target.value);
+                            load_bg_from_url(e.target.value);
                           }
                         }}
                       />
@@ -719,7 +730,7 @@ function App() {
 
                     <Form.Item style={{ marginBottom: 24 }}>
                       <Upload
-                        beforeUpload={handleBgUpload}
+                        beforeUpload={handle_bg_upload}
                         showUploadList={false}
                         accept="image/*"
                       >
@@ -742,7 +753,7 @@ function App() {
                     <Button
                       type="primary"
                       icon={<ReloadOutlined />}
-                      onClick={initCanvas}
+                      onClick={init_canvas}
                       block
                       style={{
                         background: '#3e8868',
@@ -757,7 +768,7 @@ function App() {
                     </Button>
                     <Button
                       icon={<DownloadOutlined />}
-                      onClick={handleDownload}
+                      onClick={handle_download}
                       block
                       style={{
                         borderRadius: 6,
@@ -774,7 +785,6 @@ function App() {
             </Card>
           </Col>
 
-          {/* 右侧预览 */}
           <Col xs={24} lg={14}>
             <Card
               bordered={false}
@@ -802,7 +812,7 @@ function App() {
 
               <div style={{ padding: 16, background: '#fafaf9' }}>
                 <canvas
-                  ref={canvasRef}
+                  ref={canvas_ref}
                   width={CANVAS_WIDTH}
                   height={CANVAS_HEIGHT}
                   style={{
