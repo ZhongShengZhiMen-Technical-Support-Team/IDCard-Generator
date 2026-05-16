@@ -1,6 +1,9 @@
-name: Deploy to GitHub Pages
+name: 自动 CI/CD
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -11,7 +14,37 @@ permissions:
   pages: write
 
 jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Build site
+        run: npm run build
+      
+      - name: Upload build artifact (for preview)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-preview-${{ github.event.number }}
+          path: ./dist
+          retention-days: 7
+
   build-and-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -19,23 +52,30 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: ''
+          cache: 'npm'
+      
       - name: Install dependencies
-        run: npm i
+        run: npm ci
+      
       - name: Build site
         run: npm run build
+      
       - name: Add .nojekyll file
         run: touch dist/.nojekyll
+      
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v3
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
+      
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
