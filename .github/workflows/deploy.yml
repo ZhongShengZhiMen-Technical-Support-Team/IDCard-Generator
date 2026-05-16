@@ -28,7 +28,7 @@ jobs:
           cache: ''
       
       - name: Install dependencies
-        run: npm ci
+        run: npm i
       
       - name: Run linter
         run: npm run lint
@@ -60,7 +60,7 @@ jobs:
           cache: ''
       
       - name: Install dependencies
-        run: npm ci
+        run: npm i
       
       - name: Build site
         run: npm run build
