@@ -1,5 +1,6 @@
 import zhCN from './zh-CN';
 import enUS from './en-US';
+import resources from './locales/index.js';
 
 export default {
   'zh-CN': {

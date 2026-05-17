@@ -57,9 +57,6 @@ const PHOTO_Y = 160;
 const PHOTO_WIDTH = 220;
 const PHOTO_HEIGHT = 275;
 
-
-
-
 function App() {
   const { t } = useTranslation();
   const [form] = Form.useForm();
