@@ -35,11 +35,20 @@ import {
   CameraOutlined,
   GlobalOutlined,
   PlusOutlined,
-  CloseOutlined
+  CloseOutlined,
+  GithubOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
+
+//@author: imsunxinhao
+//@date: 2026/5/17
+import { useTranslation } from 'react-i18next';
+import './i18n.js';
+import i18n from './i18n.js';
+import LangSelect from './compements/LangSelect.jsx';
+import Link from 'antd/es/typography/Link.js';
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 650;
@@ -92,7 +101,9 @@ const ability_options = [
   }
 ];
 
+
 function App() {
+  const { t, i18n } = useTranslation();
   const [form] = Form.useForm();
   const canvas_ref = useRef(null);
   const [current_bg, set_current_bg] = useState(null);
@@ -366,7 +377,7 @@ function App() {
   const handle_download = useCallback(() => {
     const canvas = canvas_ref.current;
     if (!canvas) {
-      message.error('画布未加载');
+      message.error(t('messages.canvas_not_loaded') || '证件生成失败');
       return;
     }
     const values = form.getFieldsValue();
@@ -375,7 +386,7 @@ function App() {
     link.download = file_name;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    message.success('证件已保存');
+    message.success(t('messages.download_success') || '证件已保存');
   }, [form]);
 
   const load_bg_from_url = useCallback((url) => {
@@ -392,7 +403,7 @@ function App() {
     };
     img.onerror = () => {
       set_current_bg(null);
-      message.warning('背景图片加载失败，已切换为纯色背景');
+      message.error(t('messages.bg_load_error') || '背景加载失败');
       setTimeout(() => init_canvas(), 50);
     };
     img.src = url;
@@ -419,7 +430,7 @@ function App() {
       const img = new Image();
       img.onload = () => {
         set_photo_image(img);
-        message.success('照片已上传');
+        message.success(t('messages.upload_success') || '照片已上传');
         setTimeout(() => init_canvas(), 50);
       };
       img.src = e.target.result;
@@ -430,7 +441,7 @@ function App() {
 
   const handle_remove_photo = useCallback(() => {
     set_photo_image(null);
-    message.info('照片已移除');
+    message.success(t('messages.photo_removed') || '照片已移除');
     setTimeout(() => init_canvas(), 50);
   }, [init_canvas]);
 
@@ -439,16 +450,23 @@ function App() {
     ability_options.forEach(category => {
       if (category.children) {
         category.children.forEach(child => {
-          options.push({
-            value: child.value,
-            label: `${category.label}·${child.label}`
-          });
+          if(category !== '') {
+            options.push({
+              value: child.value,
+              label: `${category.label}·${child.label}`
+            });
+          }else{
+            options.push({
+              value:child.value,
+              label:`${category.label}·${child.label}`
+            })
+          }
         });
       }
     });
     return options;
   }, []);
-
+  
   return (
     <div style={{
       minHeight: '100vh',
@@ -459,11 +477,19 @@ function App() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       <div style={{ width: '100%', maxWidth: 1200 }}>
+        <div style={{ 
+          position: 'absolute', 
+          top: 20, 
+          right: 20,
+          zIndex: 1000 
+        }}>
+          <LangSelect />
+        </div>
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
             <IdcardOutlined style={{ fontSize: 26, color: '#3e8868' }} />
             <span style={{ fontSize: 28, fontWeight: 600, color: '#1a1a1a' }}>
-              会馆证件生成器
+              {t('information.pageName')}
             </span>
           </div>
         </div>
@@ -490,7 +516,7 @@ function App() {
               }}>
                 <FileTextOutlined style={{ fontSize: 16, color: '#3e8868' }} />
                 <span style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a' }}>
-                  会馆档案
+                  {t('main.profile')}
                 </span>
               </div>
 
@@ -514,9 +540,9 @@ function App() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                       <CameraOutlined style={{ fontSize: 14, color: '#595959' }} />
                       <span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>
-                        证件照片
+                        {t('main.picture')}
                       </span>
-                      <Tag style={{ marginLeft: 4, fontSize: 11, lineHeight: '18px' }}>可选</Tag>
+                      <Tag style={{ marginLeft: 4, fontSize: 11, lineHeight: '18px' }}>{t('main.optional')}</Tag>
                     </div>
 
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -532,7 +558,7 @@ function App() {
                             borderColor: '#d9d9d9'
                           }}
                         >
-                          {photo_image ? '更换照片' : '上传照片'}
+                          {photo_image ? t('actions.change-pic') : t('actions.upload')}
                         </Button>
                       </Upload>
 
@@ -542,7 +568,7 @@ function App() {
                           onClick={handle_remove_photo}
                           style={{ borderRadius: 6 }}
                         >
-                          移除照片
+                          {t('actions.remove')}
                         </Button>
                       )}
                     </div>
@@ -553,14 +579,14 @@ function App() {
                   <Row gutter={16}>
                     <Col span={12}>
                       <Form.Item label={
-                        <span><UserOutlined style={{ marginRight: 4 }} />姓名</span>
+                        <span><UserOutlined style={{ marginRight: 4 }} />{t('main.name')}</span>
                       } name="name">
                         <Input placeholder="罗小黑" style={{ borderRadius: 6 }} />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
                       <Form.Item label={
-                        <span><TeamOutlined style={{ marginRight: 4 }} />种族</span>
+                        <span><TeamOutlined style={{ marginRight: 4 }} />{t('main.race')}</span>
                       } name="race">
                         <Input placeholder="妖精" style={{ borderRadius: 6 }} />
                       </Form.Item>
@@ -570,14 +596,14 @@ function App() {
                   <Row gutter={16}>
                     <Col span={12}>
                       <Form.Item label={
-                        <span><BankOutlined style={{ marginRight: 4 }} />隶属会馆</span>
+                        <span><BankOutlined style={{ marginRight: 4 }} />{t('main.guild')}</span>
                       } name="guild">
                         <Input placeholder="苍南会馆" style={{ borderRadius: 6 }} />
                       </Form.Item>
                     </Col>
                     <Col span={12}>
                       <Form.Item label={
-                        <span><ExperimentOutlined style={{ marginRight: 4 }} />工作</span>
+                        <span><ExperimentOutlined style={{ marginRight: 4 }} />{t('main.work')}</span>
                       } name="position">
                         <Input placeholder="普通居民" style={{ borderRadius: 6 }} />
                       </Form.Item>
@@ -587,7 +613,7 @@ function App() {
                   <Row gutter={16}>
                     <Col span={12}>
                       <Form.Item label={
-                        <span><CalendarOutlined style={{ marginRight: 4 }} />签发日期</span>
+                        <span><CalendarOutlined style={{ marginRight: 4 }} />{t('main.date')}</span>
                       } name="issue_date">
                         <DatePicker
                           picker="month"
@@ -599,7 +625,7 @@ function App() {
                     </Col>
                     <Col span={12}>
                       <Form.Item label={
-                        <span><NumberOutlined style={{ marginRight: 4 }} />证件编号</span>
+                        <span><NumberOutlined style={{ marginRight: 4 }} />{t('main.cert_number')}</span>
                       } name="cert_number">
                         <Input placeholder="LXXIII" style={{ borderRadius: 6 }} />
                       </Form.Item>
@@ -616,7 +642,7 @@ function App() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <ThunderboltOutlined style={{ fontSize: 14, color: '#595959' }} />
                         <span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>
-                          能力
+                          {t('main.lineage')}
                         </span>
                       </div>
                     </div>
@@ -697,7 +723,7 @@ function App() {
                         marginTop: selected_abilities.length > 0 ? 4 : 0
                       }}
                     >
-                      添加能力
+                      {t('actions.add_lineage')}
                     </Button>
                   </div>
 
@@ -707,18 +733,18 @@ function App() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                       <PictureOutlined style={{ fontSize: 14, color: '#595959' }} />
                       <span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>
-                        底图设置
+                        {t('main.bg')}
                       </span>
-                      <Tag style={{ marginLeft: 4, fontSize: 11, lineHeight: '18px' }}>可选</Tag>
+                      <Tag style={{ marginLeft: 4, fontSize: 11, lineHeight: '18px' }}>{t('main.optional')}</Tag>
                     </div>
                     <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>
-                      支持输入图片URL或上传本地文件
+                      {t('main.bg_desc')}
                     </div>
 
                     <Form.Item name="bg_url" style={{ marginBottom: 12 }}>
                       <Input
                         prefix={<LinkOutlined style={{ color: '#bfbfbf' }} />}
-                        placeholder="输入图片URL地址"
+                        placeholder={t('main.bg_placeholder')}
                         style={{ borderRadius: 6 }}
                         onBlur={(e) => {
                           if (e.target.value) {
@@ -743,7 +769,7 @@ function App() {
                             borderColor: '#d9d9d9'
                           }}
                         >
-                          本地上传
+                          {t('main.bg_local_upload')}
                         </Button>
                       </Upload>
                     </Form.Item>
@@ -764,7 +790,7 @@ function App() {
                         fontWeight: 500
                       }}
                     >
-                      刷新证件
+                      {t('actions.reload')}
                     </Button>
                     <Button
                       icon={<DownloadOutlined />}
@@ -777,7 +803,7 @@ function App() {
                         borderColor: '#d9d9d9'
                       }}
                     >
-                      保存图片
+                      {t('actions.download')}
                     </Button>
                   </Space>
                 </Form>
@@ -806,7 +832,7 @@ function App() {
               }}>
                 <EyeOutlined/>
                 <span style={{ fontSize: 14, fontWeight: 500, color: '#595959' }}>
-                  预览
+                  {t('main.preview')}
                 </span>
               </div>
 
@@ -834,10 +860,10 @@ function App() {
                 gap: 6,
                 background: '#fafafa'
               }}>
-                <GlobalOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />
-                <Text style={{ fontSize: 12, color: '#8c8c8c' }}>
-                  出自腾讯频道 / 众生之门社区
-                </Text>
+                <GithubOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />
+                <Link href={t('information.link')} target="_blank" style={{ fontSize: 12, color: '#8c8c8c' }}>
+                  {t('information.opensource')}
+                </Link>
               </div>
             </Card>
           </Col>
