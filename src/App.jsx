@@ -46,7 +46,6 @@ const { Text } = Typography;
 //@date: 2026/5/17
 import { useTranslation } from 'react-i18next';
 import './i18n.js';
-import i18n from './i18n.js';
 import LangSelect from './compements/LangSelect.jsx';
 import Link from 'antd/es/typography/Link.js';
 
@@ -103,7 +102,7 @@ const ability_options = [
 
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const canvas_ref = useRef(null);
   const [current_bg, set_current_bg] = useState(null);
