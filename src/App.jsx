@@ -90,7 +90,8 @@ const BASE_GZ_INDEX = (() => {
     for (let n = 0; n < 60; n++) {
       if (n % 10 === gan_i && n % 12 === zhi_i) return n;
     }
-  } catch (e) {}
+  } catch {
+  }
   return 16; 
 })();
 
@@ -197,7 +198,8 @@ const get_bazi_and_lunar = (real_year, month, day, hour = null) => {
         lunar_day_str: LUNAR_DAYS[ld - 1],
         is_accurate: true,
       };
-    } catch (e) {}
+    } catch {
+    }
   }
 
   const { gan_index, zhi_index } = get_year_gz_index_approx(real_year, month, day);
@@ -290,11 +292,20 @@ function CustomDatePicker({ value, onChange }) {
 
   const [open,         set_open]         = useState(false);
   const [view,         set_view]         = useState('day');
-  const [real_year,    set_real_year]    = useState(init_ry);
-  const [month,        set_month]        = useState(init_m);
-  const [is_bc,        set_is_bc]        = useState(init_ry < 0);
-  const [year_input,   set_year_input]   = useState(String(Math.abs(init_ry)));
+  const [date_state,   set_date_state]   = useState({
+    real_year:  init_ry,
+    month:      init_m,
+    is_bc:      init_ry < 0,
+    year_input: String(Math.abs(init_ry)),
+  });
   const [editing_year, set_editing_year] = useState(false);
+
+  const { real_year, month, is_bc, year_input } = date_state;
+
+  const set_real_year  = (v) => set_date_state(s => ({ ...s, real_year: v }));
+  const set_month      = (v) => set_date_state(s => ({ ...s, month: v }));
+  const set_is_bc      = (v) => set_date_state(s => ({ ...s, is_bc: v }));
+  const set_year_input = (v) => set_date_state(s => ({ ...s, year_input: v }));
 
   const ref = useRef(null);
 
@@ -308,10 +319,12 @@ function CustomDatePicker({ value, onChange }) {
 
   useEffect(() => {
     if (value) {
-      set_real_year(value.real_year);
-      set_month(value.month);
-      set_is_bc(value.real_year < 0);
-      set_year_input(String(Math.abs(value.real_year)));
+      set_date_state({
+        real_year:  value.real_year,
+        month:      value.month,
+        is_bc:      value.real_year < 0,
+        year_input: String(Math.abs(value.real_year)),
+      });
     }
   }, [value]);
 
@@ -342,7 +355,7 @@ function CustomDatePicker({ value, onChange }) {
 
   const go_today = () => {
     const ry = today.year(), m = today.month() + 1, d = today.date();
-    set_real_year(ry); set_month(m); set_is_bc(false); set_year_input(String(ry));
+    set_date_state({ real_year: ry, month: m, is_bc: false, year_input: String(ry) });
     onChange && onChange({ real_year: ry, month: m, day: d });
     set_open(false);
   };
@@ -517,9 +530,6 @@ function App() {
   // 图片用 ref 存储，避免 state 变化触发渲染循环
   const current_bg_ref   = useRef(null);
   const photo_image_ref  = useRef(null);
-
-  const [, force_update] = useState(0);
-  const redraw = useCallback(() => force_update(n => n + 1), []);
 
   const [has_bg,    set_has_bg]    = useState(false);
   const [has_photo, set_has_photo] = useState(false);
@@ -737,7 +747,7 @@ function App() {
     ctx.textAlign = 'start';
 
   }, [selected_abilities, date_mode, cert_number, guild_other_text,
-      birth_date, birth_hour, issue_date_str]);
+      birth_date, birth_hour, issue_date_str, form]);
 
   useEffect(() => { draw_card(); }, [draw_card]);
 
