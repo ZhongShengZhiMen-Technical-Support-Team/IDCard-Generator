@@ -90,8 +90,9 @@ const BASE_GZ_INDEX = (() => {
     for (let n = 0; n < 60; n++) {
       if (n % 10 === gan_i && n % 12 === zhi_i) return n;
     }
-  } catch {
-  }
+  } catch (err) {
+  console.error(err);
+}
   return 16; 
 })();
 
@@ -198,8 +199,9 @@ const get_bazi_and_lunar = (real_year, month, day, hour = null) => {
         lunar_day_str: LUNAR_DAYS[ld - 1],
         is_accurate: true,
       };
-    } catch {
-    }
+    } catch (err) {
+  console.error(err);
+}
   }
 
   const { gan_index, zhi_index } = get_year_gz_index_approx(real_year, month, day);
@@ -319,12 +321,14 @@ function CustomDatePicker({ value, onChange }) {
 
   useEffect(() => {
     if (value) {
-      set_date_state({
-        real_year:  value.real_year,
-        month:      value.month,
-        is_bc:      value.real_year < 0,
-        year_input: String(Math.abs(value.real_year)),
-      });
+      setTimeout(() => {
+        set_date_state({
+          real_year:  value.real_year,
+          month:      value.month,
+          is_bc:      value.real_year < 0,
+          year_input: String(Math.abs(value.real_year)),
+        });
+      }, 0);
     }
   }, [value]);
 
