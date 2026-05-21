@@ -774,11 +774,28 @@ function App() {
   const handle_download = () => {
     const canvas = canvas_ref.current;
     if (!canvas) { message.error('画布未加载'); return; }
-    const link = document.createElement('a');
-    link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    message.success('证件已保存');
+  
+    const ua = navigator.userAgent.toLowerCase();
+    const is_qq      = ua.includes('qq/');
+    const is_wechat  = ua.includes('micromessenger');
+    const is_inapp   = is_qq || is_wechat;
+  
+    if (is_inapp) {
+      const data_url = canvas.toDataURL('image/png');
+      const win = window.open();
+      win.document.write(`
+        <html><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh">
+          <p style="color:#fff;font-size:16px;margin-bottom:12px">长按图片保存到手机</p>
+          <img src="${data_url}" style="max-width:100%" />
+        </body></html>
+      `);
+    } else {
+      const link = document.createElement('a');
+      link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      message.success('证件已保存');
+    }
   };
 
   const load_bg_from_url = (url) => {
