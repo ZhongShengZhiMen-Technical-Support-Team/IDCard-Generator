@@ -521,6 +521,9 @@ function App() {
   const [, force_update] = useState(0);
   const redraw = useCallback(() => force_update(n => n + 1), []);
 
+  const [has_bg,    set_has_bg]    = useState(false);
+  const [has_photo, set_has_photo] = useState(false);
+
   const [selected_abilities, set_selected_abilities] = useState([]);
   const [date_mode,          set_date_mode]          = useState('solar');
   const [cert_number,        set_cert_number]        = useState('—');
@@ -765,10 +768,10 @@ function App() {
   };
 
   const load_bg_from_url = (url) => {
-    if (!url) { current_bg_ref.current = null; draw_card(); return; }
+    if (!url) { current_bg_ref.current = null; set_has_bg(false); draw_card(); return; }
     const img = new Image(); img.crossOrigin = 'Anonymous';
-    img.onload  = () => { current_bg_ref.current = img; draw_card(); };
-    img.onerror = () => { current_bg_ref.current = null; draw_card(); message.warning('背景图片加载失败'); };
+    img.onload  = () => { current_bg_ref.current = img; set_has_bg(true); draw_card(); };
+    img.onerror = () => { current_bg_ref.current = null; set_has_bg(false); draw_card(); message.warning('背景图片加载失败'); };
     img.src = url;
   };
 
@@ -776,7 +779,7 @@ function App() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
-      img.onload = () => { current_bg_ref.current = img; draw_card(); };
+      img.onload = () => { current_bg_ref.current = img; set_has_bg(true); draw_card(); };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -785,6 +788,7 @@ function App() {
 
   const handle_remove_bg = () => {
     current_bg_ref.current = null;
+    set_has_bg(false);
     form.setFieldsValue({ bg_url: '' });
     draw_card();
     message.info('底图已移除');
@@ -794,7 +798,7 @@ function App() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
-      img.onload = () => { photo_image_ref.current = img; draw_card(); message.success('照片已上传'); };
+      img.onload = () => { photo_image_ref.current = img; set_has_photo(true); draw_card(); message.success('照片已上传'); };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -802,7 +806,10 @@ function App() {
   };
 
   const handle_remove_photo = () => {
-    photo_image_ref.current = null; draw_card(); message.info('照片已移除');
+    photo_image_ref.current = null;
+    set_has_photo(false);
+    draw_card();
+    message.info('照片已移除');
   };
 
   const hour_options = Array.from({ length: 24 }, (_, i) => ({
@@ -844,10 +851,10 @@ function App() {
                     <Space>
                       <Upload beforeUpload={handle_photo_upload} showUploadList={false} accept="image/*">
                         <Button icon={<CameraOutlined />} style={{ borderRadius: 6 }}>
-                          {photo_image_ref.current ? '更换照片' : '上传照片'}
+                          {has_photo ? '更换照片' : '上传照片'}
                         </Button>
                       </Upload>
-                      {photo_image_ref.current && (
+                      {has_photo && (
                         <Button danger onClick={handle_remove_photo} style={{ borderRadius: 6 }}>移除照片</Button>
                       )}
                     </Space>
@@ -1021,7 +1028,7 @@ function App() {
                       <Upload beforeUpload={handle_bg_upload} showUploadList={false} accept="image/*">
                         <Button icon={<UploadOutlined />} style={{ borderRadius: 6, height: 36 }}>本地上传</Button>
                       </Upload>
-                      {current_bg_ref.current && (
+                      {has_bg && (
                         <Button danger onClick={handle_remove_bg} style={{ borderRadius: 6, height: 36 }}>移除底图</Button>
                       )}
                     </Space>
