@@ -368,11 +368,11 @@ function CustomDatePicker({ value, onChange }) {
 
   const prev_month = () => {
     if (month === 1) { change_year(-1); set_month(12); }
-    else set_month(m => m - 1);
+    else set_month(month - 1);  // ← 直接用当前 month 减1
   };
   const next_month = () => {
     if (month === 12) { change_year(1); set_month(1); }
-    else set_month(m => m + 1);
+    else set_month(month + 1);  // ← 直接用当前 month 加1
   };
 
   const calendar_days = useMemo(() => {
