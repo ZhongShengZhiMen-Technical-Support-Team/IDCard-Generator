@@ -16,60 +16,307 @@ import { Solar } from 'lunar-javascript';
 
 const { Text } = Typography;
 
-//@author: imsunxinhao
-//@date: 2026/5/17
-import { useTranslation } from 'react-i18next';
-import './i18n.js';
-import LangSelect from './compements/LangSelect.jsx';
-import Link from 'antd/es/typography/Link.js';
+const CANVAS_WIDTH  = 900;
+const CANVAS_HEIGHT = 600;
+const PHOTO_X       = 40;
+const PHOTO_Y       = 152;
+const PHOTO_WIDTH   = 200;
+const PHOTO_HEIGHT  = 260;
 
-const CANVAS_WIDTH = 900;
-const CANVAS_HEIGHT = 650;
+const GUILD_LIST = [
+  { label: '无隶属会馆', value: '无隶属会馆', code: 'FR' },
+  { label: '苍南会馆',   value: '苍南会馆',   code: 'CN' },
+  { label: '灵溪会馆',   value: '灵溪会馆',   code: 'LX' },
+  { label: '龙游会馆',   value: '龙游会馆',   code: 'LY' },
+  { label: '流石会馆',   value: '流石会馆',   code: 'LS' },
+  { label: '粤东会馆',   value: '粤东会馆',   code: 'YD' },
+  { label: '洞桥会馆',   value: '洞桥会馆',   code: 'DQ' },
+  { label: '燕京会馆',   value: '燕京会馆',   code: 'YJ' },
+  { label: '黄河会馆',   value: '黄河会馆',   code: 'YR' },
+  { label: '河海会馆',   value: '河海会馆',   code: 'HH' },
+  { label: '榕城会馆',   value: '榕城会馆',   code: 'RC' },
+  { label: '寒木会馆',   value: '寒木会馆',   code: 'HM' },
+  { label: '花间会馆',   value: '花间会馆',   code: 'HJ' },
+  { label: '茂竹会馆',   value: '茂竹会馆',   code: 'MZ' },
+  { label: '风灵会馆',   value: '风灵会馆',   code: 'FL' },
+  { label: '保密',       value: '保密',       code: 'SC' },
+  { label: '其他',       value: '其他',       code: 'OT' },
+];
 
-const PHOTO_X = 70;
-const PHOTO_Y = 160;
-const PHOTO_WIDTH = 220;
-const PHOTO_HEIGHT = 275;
+const ABILITY_OPTIONS = [
+  {
+    value: '御灵系', label: '御灵系',
+    children: [
+      { value: '金', label: '金' },
+      { value: '木', label: '木' },
+      { value: '水', label: '水' },
+      { value: '火', label: '火' },
+      { value: '土', label: '土' },
+    ],
+  },
+  { value: '空间系',     label: '空间系' },
+  { value: '造物系',     label: '造物系' },
+  { value: '生灵系',     label: '生灵系' },
+  { value: '心灵系',     label: '心灵系' },
+  { value: '锁御系',     label: '锁御系' },
+  { value: '乱七八糟系', label: '乱七八糟系' },
+];
 
-function App() {
-  const { t } = useTranslation();
-  const [form] = Form.useForm();
-  const canvas_ref = useRef(null);
-  const [current_bg, set_current_bg] = useState(null);
-  const [photo_image, set_photo_image] = useState(null);
-  const [selected_abilities, set_selected_abilities] = useState([]);
+const TIAN_GAN     = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const DI_ZHI       = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const LUNAR_MONTHS = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+const LUNAR_DAYS   = [
+  '初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+  '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+  '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十',
+];
+const MONTH_NAMES = ['一月','二月','三月','四月','五月','六月',
+                     '七月','八月','九月','十月','十一月','十二月'];
+const WEEK_NAMES  = ['日','一','二','三','四','五','六'];
 
-  const round_rect = useCallback((ctx, x, y, w, h, r) => {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }, []);
+// 五虎遁年起月：年干(index%5) → 寅月天干起始index
+const YUE_GAN_START = [2, 4, 6, 8, 0];
 
-  const draw_watermark = useCallback((ctx) => {
-    const grad = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    grad.addColorStop(0, 'rgba(180, 220, 150, 0.08)');
-    grad.addColorStop(0.3, 'rgba(220, 240, 180, 0.15)');
-    grad.addColorStop(0.5, 'rgba(200, 230, 160, 0.25)');
-    grad.addColorStop(0.7, 'rgba(220, 240, 180, 0.15)');
-    grad.addColorStop(1, 'rgba(180, 220, 150, 0.08)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+// 五鼠遁日起时：日干(index%5) → 子时天干起始index
+const SHI_GAN_START = [0, 2, 4, 6, 8];
 
-    ctx.font = 'bold 28px "Segoe UI", "Microsoft YaHei"';
-    ctx.fillStyle = 'rgba(100, 160, 80, 0.2)';
-
-    for (let i = 0; i < 60; i++) {
-      ctx.fillStyle = `rgba(150, 200, 100, ${Math.random() * 0.15})`;
-      ctx.fillRect(Math.random() * CANVAS_WIDTH, Math.random() * CANVAS_HEIGHT, 2, 2);
+// 儒略日基准：2000-01-01 = JD 2451545
+const BASE_JD = 2451545;
+const BASE_GZ_INDEX = (() => {
+  try {
+    const lunar = Solar.fromYmd(2000, 1, 1).getLunar();
+    const gan_i = TIAN_GAN.indexOf(lunar.getDayGan());
+    const zhi_i = DI_ZHI.indexOf(lunar.getDayZhi());
+    for (let n = 0; n < 60; n++) {
+      if (n % 10 === gan_i && n % 12 === zhi_i) return n;
     }
+  } catch (err) {
+  console.error(err);
+}
+  return 16; 
+})();
+
+// 公历→儒略日，支持公元前（内部转天文年，公元前1年=天文0年）
+const date_to_jd = (real_year, month, day) => {
+  const y = real_year > 0 ? real_year : real_year + 1;
+  const is_gregorian = y > 1582 || (y === 1582 && month > 10)
+    || (y === 1582 && month === 10 && day >= 15);
+  const a  = Math.floor((14 - month) / 12);
+  const yr = y + 4800 - a;
+  const mo = month + 12 * a - 3;
+  if (is_gregorian) {
+    return day + Math.floor((153 * mo + 2) / 5) + 365 * yr
+      + Math.floor(yr / 4) - Math.floor(yr / 100) + Math.floor(yr / 400) - 32045;
+  }
+  return day + Math.floor((153 * mo + 2) / 5) + 365 * yr
+    + Math.floor(yr / 4) - 32083;
+};
+
+// 儒略日→60甲子序号
+const jd_to_day_gz_index = (jd) =>
+  ((BASE_GZ_INDEX + (jd - BASE_JD)) % 60 + 60) % 60;
+
+// 范围外年干支：以2月4日近似立春切年，甲子年=公元4年
+const get_year_gz_index_approx = (real_year, month, day) => {
+  const gz_year = (month < 2 || (month === 2 && day < 4)) ? real_year - 1 : real_year;
+  const astro   = gz_year > 0 ? gz_year : gz_year === 0 ? -1 : gz_year + 1;
+  return {
+    gan_index: ((astro - 4) % 10 + 10) % 10,
+    zhi_index: ((astro - 4) % 12 + 12) % 12,
+  };
+};
+
+// 日历显示用年干支（按公历年，不切立春）
+const get_ganzhi_year_for_display = (real_year) => {
+  const astro = real_year > 0 ? real_year : real_year + 1;
+  const g = ((astro - 4) % 10 + 10) % 10;
+  const z = ((astro - 4) % 12 + 12) % 12;
+  return `${TIAN_GAN[g]}${DI_ZHI[z]}`;
+};
+
+// 各月节气近似日（index=month-1），用于范围外月柱推算
+const JIEQI_APPROX = [6, 4, 6, 5, 6, 6, 7, 7, 8, 8, 7, 7];
+
+// 范围外月干支：节气近似切月 + 五虎遁推月干
+const get_month_gz_approx = (real_year, month, day) => {
+  const { gan_index: ygi } = get_year_gz_index_approx(real_year, month, day);
+  const before   = day < JIEQI_APPROX[month - 1];
+  const jm0      = before ? ((month - 2 + 12) % 12) : ((month - 1) % 12); // 节气月索引，0=寅月
+  const zhi_idx  = (jm0 + 2) % 12; // 寅=2
+  const gan_idx  = (YUE_GAN_START[ygi % 5] + jm0) % 10;
+  return `${TIAN_GAN[gan_idx]}${DI_ZHI[zhi_idx]}`;
+};
+
+// 时辰索引：晚子时(23点)归当日
+const hour_to_shichen_index = (hour) => {
+  if (hour === 23) return 0;
+  return Math.floor((hour + 1) / 2);
+};
+
+// 五鼠遁推时间干支
+const get_hour_gz = (day_gz_index, hour) => {
+  const ri  = day_gz_index % 10;
+  const shi = hour_to_shichen_index(hour);
+  return `${TIAN_GAN[(SHI_GAN_START[ri % 5] + shi) % 10]}${DI_ZHI[shi]}`;
+};
+
+// 范围外伪农历：干支准确，月日近似，保证格式合理
+const fake_lunar_month_day = (real_year, month, day) => {
+  const seed = ((Math.abs(real_year) * 31 + month * 7 + day) % 100 + 100) % 100;
+  let fm = month - 1 - (seed % 2);
+  let fd = day - 10 - (seed % 6);
+  if (fd < 1)  { fd += 30; fm -= 1; }
+  if (fm < 1)  fm += 12;
+  if (fd > 30) fd = 30;
+  if (fd < 1)  fd = 1;
+  return { lunar_month: fm, lunar_day: fd };
+};
+
+// 主转换：1900-2100年参照库精确计算，范围外用近似公式
+const get_bazi_and_lunar = (real_year, month, day, hour = null) => {
+  if (real_year >= 1900 && real_year <= 2100) {
+    try {
+      const solar = Solar.fromYmd(real_year, month, day);
+      const lunar = solar.getLunar();
+      const yg = lunar.getYearGanByLiChun(); // 按立春切年
+      const yz = lunar.getYearZhiByLiChun();
+      const mg = lunar.getMonthGan();         // 按节气切月
+      const mz = lunar.getMonthZhi();
+      const dg = lunar.getDayGan();
+      const dz = lunar.getDayZhi();
+      let hour_gz = null;
+      if (hour !== null) {
+        const ri  = TIAN_GAN.indexOf(dg);
+        const shi = hour_to_shichen_index(hour);
+        hour_gz = `${TIAN_GAN[(SHI_GAN_START[ri % 5] + shi) % 10]}${DI_ZHI[shi]}`;
+      }
+      const lm = Math.abs(lunar.getMonth()); // 闰月为负，取绝对值
+      const ld = lunar.getDay();
+      return {
+        year_gz: `${yg}${yz}`, month_gz: `${mg}${mz}`, day_gz: `${dg}${dz}`,
+        hour_gz,
+        lunar_month_str: `${LUNAR_MONTHS[lm - 1]}月`,
+        lunar_day_str: LUNAR_DAYS[ld - 1],
+        is_accurate: true,
+      };
+    } catch (err) {
+  console.error(err);
+}
+  }
+
+  const { gan_index, zhi_index } = get_year_gz_index_approx(real_year, month, day);
+  const jd      = date_to_jd(real_year, month, day);
+  const gz_idx  = jd_to_day_gz_index(jd);
+  const { lunar_month, lunar_day } = fake_lunar_month_day(real_year, month, day);
+  let hour_gz = null;
+  if (hour !== null) hour_gz = get_hour_gz(gz_idx, hour);
+  return {
+    year_gz:  `${TIAN_GAN[gan_index]}${DI_ZHI[zhi_index]}`,
+    month_gz: get_month_gz_approx(real_year, month, day),
+    day_gz:   `${TIAN_GAN[gz_idx % 10]}${DI_ZHI[gz_idx % 12]}`,
+    hour_gz,
+    lunar_month_str: `${LUNAR_MONTHS[lunar_month - 1]}月`,
+    lunar_day_str:   LUNAR_DAYS[lunar_day - 1],
+    is_accurate: false,
+  };
+};
+
+const format_bazi = (real_year, month, day, hour = null) => {
+  const { year_gz, month_gz, day_gz, hour_gz } = get_bazi_and_lunar(real_year, month, day, hour);
+  return hour_gz
+    ? `${year_gz} ${month_gz} ${day_gz} ${hour_gz}`
+    : `${year_gz} ${month_gz} ${day_gz}`;
+};
+
+const format_lunar = (real_year, month, day) => {
+  const { year_gz, lunar_month_str, lunar_day_str } = get_bazi_and_lunar(real_year, month, day);
+  return `${year_gz}年${lunar_month_str}${lunar_day_str}`;
+};
+
+const format_solar = (real_year, month, day) =>
+  `${real_year < 0 ? '公元前' : ''}${Math.abs(real_year)}年${String(month).padStart(2,'0')}月${String(day).padStart(2,'0')}日`;
+
+const calc_age = (real_year, month, day) => {
+  const now = dayjs();
+  const ny = now.year(), nm = now.month() + 1, nd = now.date();
+  let age = ny - real_year;
+  if (real_year < 0 && ny > 0) age -= 1;
+  if (!(nm > month || (nm === month && nd >= day))) age -= 1;
+  return age;
+};
+
+const is_leap_year = (real_year) => {
+  const y = real_year > 0 ? real_year : real_year + 1;
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+};
+
+const days_in_month = (real_year, month) => {
+  const days = [31,28,31,30,31,30,31,31,30,31,30,31];
+  if (month === 2 && is_leap_year(real_year)) return 29;
+  return days[month - 1];
+};
+
+const get_first_weekday = (real_year, month) => {
+  const jd = date_to_jd(real_year, month, 1);
+  return ((jd + 1) % 7 + 7) % 7;
+};
+
+const rand_5 = () => String(Math.floor(Math.random() * 90000) + 10000);
+const get_guild_code = (v) => { const f = GUILD_LIST.find(g => g.value === v); return f ? f.code : 'OT'; };
+
+const draw_round_rect = (ctx, x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+};
+
+const nav_btn_style = {
+  background: 'none', border: 'none', cursor: 'pointer',
+  fontSize: 13, color: '#595959', padding: '2px 5px',
+  borderRadius: 4, lineHeight: 1, fontWeight: 600,
+};
+const text_btn_style = {
+  background: 'none', border: 'none', cursor: 'pointer',
+  fontSize: 12, padding: '2px 4px', fontWeight: 500,
+};
+
+function CustomDatePicker({ value, onChange }) {
+  const today  = dayjs();
+  const init_ry = value ? value.real_year : today.year();
+  const init_m  = value ? value.month     : today.month() + 1;
+
+  const [open,         set_open]         = useState(false);
+  const [view,         set_view]         = useState('day');
+  const [date_state,   set_date_state]   = useState({
+    real_year:  init_ry,
+    month:      init_m,
+    is_bc:      init_ry < 0,
+    year_input: String(Math.abs(init_ry)),
+  });
+  const [editing_year, set_editing_year] = useState(false);
+
+  const { real_year, month, is_bc, year_input } = date_state;
+
+  const set_real_year  = (v) => set_date_state(s => ({ ...s, real_year: v }));
+  const set_month      = (v) => set_date_state(s => ({ ...s, month: v }));
+  const set_is_bc      = (v) => set_date_state(s => ({ ...s, is_bc: v }));
+  const set_year_input = (v) => set_date_state(s => ({ ...s, year_input: v }));
+
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) set_open(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   useEffect(() => {
