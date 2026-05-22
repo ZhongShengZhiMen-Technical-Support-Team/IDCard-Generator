@@ -774,10 +774,10 @@ function App() {
   const handle_download = async () => {
     const canvas = canvas_ref.current;
     if (!canvas) { message.error('画布未加载'); return; }
-
+  
     const ua = navigator.userAgent.toLowerCase();
     const is_qq = ua.includes('qq/') || ua.includes('qqguild');
-
+  
     if (!is_qq) {
       const link = document.createElement('a');
       link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
@@ -786,50 +786,155 @@ function App() {
       message.success('证件已保存');
       return;
     }
-
-    // QQ环境：上传到imgbb
-    message.loading({ content: '正在生成图片...', key: 'upload', duration: 0 });
-
+  
+    // 加载遮罩
+    const loading_mask = document.createElement('div');
+    loading_mask.style.cssText = `
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.82);
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+      z-index:9999;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:28px;
+      font-family:system-ui,-apple-system,sans-serif;
+    `;
+  
+    loading_mask.innerHTML = `
+      <style>
+        @keyframes zsc_spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes zsc_fade {
+          from { opacity:0; }
+          to   { opacity:1; }
+        }
+        @keyframes zsc_progress {
+          0%  { width:0%; }
+          30% { width:40%; }
+          65% { width:70%; }
+          85% { width:88%; }
+          100%{ width:95%; }
+        }
+      </style>
+  
+      <div style="
+        display:flex;flex-direction:column;align-items:center;gap:28px;
+        animation:zsc_fade 0.25s ease;
+      ">
+        <!-- 转圈 -->
+        <div style="
+          width:40px;height:40px;border-radius:50%;
+          border:2px solid rgba(255,255,255,0.1);
+          border-top-color:#3e8868;
+          animation:zsc_spin 0.9s linear infinite;
+        "></div>
+  
+        <!-- 文字 -->
+        <div style="text-align:center;">
+          <div style="color:#fff;font-size:16px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">
+            证件制作中
+          </div>
+          <div id="zsc_step" style="
+            color:rgba(255,255,255,0.4);font-size:12px;letter-spacing:1px;
+            transition:opacity 0.3s;
+          ">正在校验种族信息...</div>
+        </div>
+  
+        <!-- 进度条 -->
+        <div style="width:180px;height:2px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+          <div style="
+            height:100%;background:#3e8868;border-radius:999px;
+            animation:zsc_progress 8s ease forwards;
+          "></div>
+        </div>
+      </div>
+    `;
+  
+    document.body.appendChild(loading_mask);
+  
+    // 步骤文字切换
+    const steps = [
+      '正在校验种族信息...',
+      '能力信息备案中...',
+      '正在进行电子归档...',
+      '即将完成...',
+    ];
+    let step_i = 0;
+    const step_el = loading_mask.querySelector('#zsc_step');
+    const step_timer = setInterval(() => {
+      step_i = (step_i + 1) % steps.length;
+      step_el.style.opacity = '0';
+      setTimeout(() => {
+        step_el.innerText = steps[step_i];
+        step_el.style.opacity = '1';
+      }, 300);
+    }, 1800);
+  
+    // 上传
     canvas.toBlob(async (blob) => {
       try {
         const form_data = new FormData();
         form_data.append('image', blob, 'card.png');
-
+  
         const res  = await fetch(`https://api.imgbb.com/1/upload?key=[hidden]`, {
           method: 'POST',
           body: form_data,
         });
         const data = await res.json();
-
+  
+        clearInterval(step_timer);
+        document.body.removeChild(loading_mask);
+  
         if (data.success) {
-          message.destroy('upload');
-
-          const mask = document.createElement('div');
-          mask.style.cssText = `
+          const img_mask = document.createElement('div');
+          img_mask.style.cssText = `
             position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.92);z-index:9999;
+            background:rgba(0,0,0,0.92);
+            backdrop-filter:blur(4px);
+            -webkit-backdrop-filter:blur(4px);
+            z-index:9999;
             display:flex;flex-direction:column;
-            align-items:center;justify-content:center;gap:16px;
+            align-items:center;justify-content:center;gap:20px;
             padding:16px;box-sizing:border-box;
+            font-family:system-ui,-apple-system,sans-serif;
+            animation:zsc_fade 0.25s ease;
           `;
-          mask.innerHTML = `
-            <p style="color:#fff;font-size:16px;font-weight:600;margin:0">
-              请长按图片保存
-            </p>
-            <img src="${data.data.url}" style="max-width:100%;max-height:65vh;border-radius:8px"/>
-            <button onclick="this.parentElement.remove()" style="
-              padding:10px 32px;border-radius:8px;border:none;
-              background:#fff;font-size:15px;cursor:pointer;
+          img_mask.innerHTML = `
+            <style>
+              @keyframes zsc_fade {
+                from { opacity:0; }
+                to   { opacity:1; }
+              }
+            </style>
+  
+            <div style="color:#fff;font-size:15px;font-weight:500;letter-spacing:1px;">
+              长按图片保存
+            </div>
+  
+            <img src="${data.data.url}" style="
+              max-width:100%;max-height:65vh;
+              border-radius:8px;
+              box-shadow:0 4px 24px rgba(0,0,0,0.4);
+            "/>
+  
+            <button onclick="this.closest('div').remove()" style="
+              padding:10px 36px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
+              background:transparent;color:rgba(255,255,255,0.7);
+              font-size:14px;cursor:pointer;letter-spacing:1px;
             ">关闭</button>
           `;
-          document.body.appendChild(mask);
-
+          document.body.appendChild(img_mask);
+  
         } else {
           throw new Error('上传失败');
         }
       } catch (err) {
-        console.error('上传失败:', err);
-        message.error({ content: '生成失败，请截图保存', key: 'upload' });
+        clearInterval(step_timer);
+        if (document.body.contains(loading_mask)) {
+          document.body.removeChild(loading_mask);
+        }
+        message.error('证件已生成，但因平台限制，请截图保存');
       }
     }, 'image/png');
   };
