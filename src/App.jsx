@@ -781,14 +781,41 @@ function App() {
     if (is_inapp) {
       canvas.toBlob((blob) => {
         const blob_url = URL.createObjectURL(blob);
-        const win = window.open();
-        win.document.write(`
-          <html><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh">
-            <p style="color:#fff;font-size:16px;margin-bottom:12px">长按图片保存到手机</p>
-            <img src="${blob_url}" style="max-width:100%" />
-          </body></html>
-        `);
+  
+        const mask = document.createElement('div');
+        mask.style.cssText = `
+          position:fixed; top:0; left:0; width:100%; height:100%;
+          background:rgba(0,0,0,0.9); z-index:9999;
+          display:flex; flex-direction:column;
+          align-items:center; justify-content:center; gap:16px;
+          padding:16px; box-sizing:border-box;
+        `;
+  
+        const tip = document.createElement('p');
+        tip.innerText = '长按图片保存到手机';
+        tip.style.cssText = 'color:#fff; font-size:16px; margin:0; font-weight:600;';
+  
+        const img = document.createElement('img');
+        img.src = blob_url;
+        img.style.cssText = 'max-width:100%; max-height:65vh; border-radius:8px; display:block;';
+  
+        const close_btn = document.createElement('button');
+        close_btn.innerText = '关闭';
+        close_btn.style.cssText = `
+          padding:10px 32px; border-radius:8px; border:none;
+          background:#fff; color:#333; font-size:15px; cursor:pointer;
+        `;
+        close_btn.onclick = () => {
+          URL.revokeObjectURL(blob_url);
+          document.body.removeChild(mask);
+        };
+  
+        mask.appendChild(tip);
+        mask.appendChild(img);
+        mask.appendChild(close_btn);
+        document.body.appendChild(mask);
       }, 'image/png');
+  
     } else {
       const link = document.createElement('a');
       link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
