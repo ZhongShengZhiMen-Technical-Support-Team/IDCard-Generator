@@ -895,7 +895,7 @@ function App() {
       <div style={{ width: '100%', maxWidth: 1200 }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <IdcardOutlined style={{ fontSize: 26, color: '#3e8868', marginRight: 10 }} />
-          <span style={{ fontSize: 28, fontWeight: 600 }}>妖精证件生成器</span>
+          <span style={{ fontSize: 28, fontWeight: 600 }}>会馆证件生成器</span>
         </div>
 
         <Row gutter={[32, 32]}>
@@ -1049,7 +1049,7 @@ function App() {
                             </Select>
                             <Input value={ability?.[2] || ''}
                               onChange={e => handle_ability_change(index, [ability?.[0], ability?.[1], e.target.value])}
-                              placeholder="能力名称（可选）" style={{ flex: 1, minWidth: 120, borderRadius: 6 }} />
+                              placeholder="能力名称" style={{ flex: 1, minWidth: 120, borderRadius: 6 }} />
                             <Button type="text" danger icon={<CloseOutlined />}
                               onClick={() => handle_remove_ability(index)} size="small" />
                           </div>
