@@ -771,58 +771,67 @@ function App() {
   const handle_ability_change = (i, v) => set_selected_abilities(p => { const n = [...p]; n[i] = v; return n; });
   const handle_remove_ability = (i)    => set_selected_abilities(p => p.filter((_, idx) => idx !== i));
 
-  const handle_download = () => {
+  const handle_download = async () => {
     const canvas = canvas_ref.current;
     if (!canvas) { message.error('画布未加载'); return; }
-  
+
     const ua = navigator.userAgent.toLowerCase();
-    const is_inapp = ua.includes('qq/') || ua.includes('micromessenger');
-  
-    if (is_inapp) {
-      canvas.toBlob((blob) => {
-        const blob_url = URL.createObjectURL(blob);
-  
-        const mask = document.createElement('div');
-        mask.style.cssText = `
-          position:fixed; top:0; left:0; width:100%; height:100%;
-          background:rgba(0,0,0,0.9); z-index:9999;
-          display:flex; flex-direction:column;
-          align-items:center; justify-content:center; gap:16px;
-          padding:16px; box-sizing:border-box;
-        `;
-  
-        const tip = document.createElement('p');
-        tip.innerText = '长按图片保存到手机';
-        tip.style.cssText = 'color:#fff; font-size:16px; margin:0; font-weight:600;';
-  
-        const img = document.createElement('img');
-        img.src = blob_url;
-        img.style.cssText = 'max-width:100%; max-height:65vh; border-radius:8px; display:block;';
-  
-        const close_btn = document.createElement('button');
-        close_btn.innerText = '关闭';
-        close_btn.style.cssText = `
-          padding:10px 32px; border-radius:8px; border:none;
-          background:#fff; color:#333; font-size:15px; cursor:pointer;
-        `;
-        close_btn.onclick = () => {
-          URL.revokeObjectURL(blob_url);
-          document.body.removeChild(mask);
-        };
-  
-        mask.appendChild(tip);
-        mask.appendChild(img);
-        mask.appendChild(close_btn);
-        document.body.appendChild(mask);
-      }, 'image/png');
-  
-    } else {
+    const is_qq = ua.includes('qq/') || ua.includes('qqguild');
+
+    if (!is_qq) {
       const link = document.createElement('a');
       link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
       message.success('证件已保存');
+      return;
     }
+
+    // QQ环境：上传到imgbb
+    message.loading({ content: '正在生成图片...', key: 'upload', duration: 0 });
+
+    canvas.toBlob(async (blob) => {
+      try {
+        const form_data = new FormData();
+        form_data.append('image', blob, 'card.png');
+
+        const res  = await fetch(`https://api.imgbb.com/1/upload?key=[hidden]`, {
+          method: 'POST',
+          body: form_data,
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          message.destroy('upload');
+
+          const mask = document.createElement('div');
+          mask.style.cssText = `
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.92);z-index:9999;
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;gap:16px;
+            padding:16px;box-sizing:border-box;
+          `;
+          mask.innerHTML = `
+            <p style="color:#fff;font-size:16px;font-weight:600;margin:0">
+              请长按图片保存
+            </p>
+            <img src="${data.data.url}" style="max-width:100%;max-height:65vh;border-radius:8px"/>
+            <button onclick="this.parentElement.remove()" style="
+              padding:10px 32px;border-radius:8px;border:none;
+              background:#fff;font-size:15px;cursor:pointer;
+            ">关闭</button>
+          `;
+          document.body.appendChild(mask);
+
+        } else {
+          throw new Error('上传失败');
+        }
+      } catch (err) {
+        console.error('上传失败:', err);
+        message.error({ content: '生成失败，请截图保存', key: 'upload' });
+      }
+    }, 'image/png');
   };
 
   const load_bg_from_url = (url) => {
