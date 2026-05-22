@@ -1040,13 +1040,23 @@ function App() {
                                 <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                               ))}
                             </Select>
-                            <Select value={ability?.[1] || undefined}
-                              onChange={val => handle_ability_change(index, [ability[0], val, ability?.[2] || ''])}
-                              placeholder="属性" style={{ width: 90 }} allowClear>
-                              {ABILITY_OPTIONS[0].children.map(c => (
-                                <Select.Option key={c.value} value={c.value}>{c.label}</Select.Option>
-                              ))}
-                            </Select>
+                            <AutoComplete
+                              value={ability?.[1] || undefined}
+                              onChange={val => handle_ability_change(index, [ability[0], val || null, ability?.[2] || ''])}
+                              placeholder="属性"
+                              style={{ width: 90 }}
+                              options={[
+                                { value: '金' },
+                                { value: '木' },
+                                { value: '水' },
+                                { value: '火' },
+                                { value: '土' },
+                              ]}
+                              filterOption={(inputValue, option) =>
+                                option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                              }
+                              allowClear
+                            />
                             <Input value={ability?.[2] || ''}
                               onChange={e => handle_ability_change(index, [ability?.[0], ability?.[1], e.target.value])}
                               placeholder="能力名称" style={{ flex: 1, minWidth: 120, borderRadius: 6 }} />
