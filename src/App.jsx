@@ -837,7 +837,7 @@ function App() {
           </div>
           <div id="zsc_step" style="
             color:rgba(255,255,255,0.4);font-size:12px;letter-spacing:1px;
-            transition:opacity 0.3s;
+            transition:opacity 0.15s;/* 缩短过渡时间以适应500ms的切换率 */
           ">正在校验种族信息...</div>
         </div>
   
@@ -853,7 +853,7 @@ function App() {
   
     document.body.appendChild(loading_mask);
   
-    // 步骤文字切换
+    // 步骤文字
     const steps = [
       '正在校验种族信息...',
       '能力信息备案中...',
@@ -862,14 +862,20 @@ function App() {
     ];
     let step_i = 0;
     const step_el = loading_mask.querySelector('#zsc_step');
+    
+    // 修改后的定时器逻辑：0.5秒切换一次，到最后一步停止
     const step_timer = setInterval(() => {
-      step_i = (step_i + 1) % steps.length;
-      step_el.style.opacity = '0';
-      setTimeout(() => {
-        step_el.innerText = steps[step_i];
-        step_el.style.opacity = '1';
-      }, 300);
-    }, 1800);
+      if (step_i < steps.length - 1) {
+        step_i++;
+        step_el.style.opacity = '0';
+        setTimeout(() => {
+          step_el.innerText = steps[step_i];
+          step_el.style.opacity = '1';
+        }, 150); // 150ms 后写入新文本并淡入
+      } else {
+        clearInterval(step_timer); // 已经到最后一步，停止循环
+      }
+    }, 500);
   
     // 上传
     canvas.toBlob(async (blob) => {
