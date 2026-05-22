@@ -776,19 +776,19 @@ function App() {
     if (!canvas) { message.error('画布未加载'); return; }
   
     const ua = navigator.userAgent.toLowerCase();
-    const is_qq      = ua.includes('qq/');
-    const is_wechat  = ua.includes('micromessenger');
-    const is_inapp   = is_qq || is_wechat;
+    const is_inapp = ua.includes('qq/') || ua.includes('micromessenger');
   
     if (is_inapp) {
-      const data_url = canvas.toDataURL('image/png');
-      const win = window.open();
-      win.document.write(`
-        <html><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh">
-          <p style="color:#fff;font-size:16px;margin-bottom:12px">长按图片保存到手机</p>
-          <img src="${data_url}" style="max-width:100%" />
-        </body></html>
-      `);
+      canvas.toBlob((blob) => {
+        const blob_url = URL.createObjectURL(blob);
+        const win = window.open();
+        win.document.write(`
+          <html><body style="margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh">
+            <p style="color:#fff;font-size:16px;margin-bottom:12px">长按图片保存到手机</p>
+            <img src="${blob_url}" style="max-width:100%" />
+          </body></html>
+        `);
+      }, 'image/png');
     } else {
       const link = document.createElement('a');
       link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
