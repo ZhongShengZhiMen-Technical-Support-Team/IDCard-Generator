@@ -827,7 +827,7 @@ function App() {
         } else {
           throw new Error('上传失败');
         }
-      } catch (err) {
+      } catch () {
         message.error({ content: '生成失败，请截图保存', key: 'upload' });
       }
     }, 'image/png');
