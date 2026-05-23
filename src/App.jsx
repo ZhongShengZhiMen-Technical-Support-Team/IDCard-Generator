@@ -687,7 +687,7 @@ function App() {
   const [selected_abilities, set_selected_abilities] = useState([]);
   const [date_mode, set_date_mode] = useState('solar');
   const [cert_number, set_cert_number] = useState('—');
-  const [guild_other_text] = useState('');
+  const [guild_other_text, set_guild_other_text] = useState('');
   const [birth_date, set_birth_date] = useState(null);
   const [birth_hour, set_birth_hour] = useState(null);
 
@@ -977,136 +977,186 @@ function App() {
   const handle_remove_ability = (i) => set_selected_abilities(p => p.filter((_, idx) => idx !== i));
 
   const handle_download = async () => {
-    const canvas = canvas_ref.current;
-    if (!canvas) { message.error('画布未加载'); return; }
-
-    const ua = navigator.userAgent.toLowerCase();
-    const is_qq = ua.includes('qq/') || ua.includes('qqguild');
-
-    if (!is_qq) {
-      const link = document.createElement('a');
-      link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      message.success('证件已保存');
-      return;
-    }
-
-    // QQ环境：加载精美的遮罩层
-    const loading_mask = document.createElement('div');
-    loading_mask.style.cssText = `
-      position:fixed;top:0;left:0;width:100%;height:100%;
-      background:rgba(0,0,0,0.82);
-      backdrop-filter:blur(4px);
-      -webkit-backdrop-filter:blur(4px);
-      z-index:9999;
-      display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:28px;
-      font-family:system-ui,-apple-system,sans-serif;
-    `;
-
-    loading_mask.innerHTML = `
-      <style>
-        @keyframes zsc_spin {
-          to { transform: rotate(360deg); }
-        }
-        @keyframes zsc_fade {
-          from { opacity:0; }
-          to   { opacity:1; }
-        }
-        @keyframes zsc_progress {
-          0%  { width:0%; }
-          30% { width:40%; }
-          65% { width:70%; }
-          85% { width:88%; }
-          100%{ width:95%; }
-        }
-      </style>
-
-      <div style="
-        display:flex;flex-direction:column;align-items:center;gap:28px;
-        animation:zsc_fade 0.25s ease;
-      ">
-        <!-- 转圈 -->
-        <div style="
-          width:40px;height:40px;border-radius:50%;
-          border:2px solid rgba(255,255,255,0.1);
-          border-top-color:#3e8868;
-          animation:zsc_spin 0.9s linear infinite;
-        "></div>
-
-        <!-- 文字 -->
-        <div style="text-align:center;">
-          <div style="color:#fff;font-size:16px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">
-            证件制作中
-          </div>
-          <div id="zsc_step" style="
-            color:rgba(255,255,255,0.4);font-size:12px;letter-spacing:1px;
-            transition:opacity 0.15s;
-          ">正在校验种族信息...</div>
-        </div>
-
-        <!-- 进度条 -->
-        <div style="width:180px;height:2px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
-          <div style="
-            height:100%;background:#3e8868;border-radius:999px;
-            animation:zsc_progress 8s ease forwards;
-          "></div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(loading_mask);
-
+      const canvas = canvas_ref.current;
+      if (!canvas) { message.error('画布未加载'); return; }
   
-    const steps = [
-      '正在校验种族信息...',
-      '能力信息备案中...',
-      '正在进行电子归档...',
-      '即将完成...',
-    ];
-    let step_i = 0;
-    const step_el = loading_mask.querySelector('#zsc_step');
-    const step_timer = setInterval(() => {
-      if (step_i < steps.length - 1) {
-        step_i++;
-        step_el.style.opacity = '0';
-        setTimeout(() => {
-          step_el.innerText = steps[step_i];
-          step_el.style.opacity = '1';
-        }, 150);
-      } else {
-        clearInterval(step_timer);
+      const ua = navigator.userAgent.toLowerCase();
+      const is_qq = ua.includes('qq/') || ua.includes('qqguild');
+  
+      if (!is_qq) {
+        const link = document.createElement('a');
+        link.download = `ZSCommunity_${form.getFieldValue('name') || 'card'}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        message.success('证件已保存');
+        return;
       }
-    }, 500);
-
-    // 上传到 ImgBB
-    canvas.toBlob(async (blob) => {
-      try {
-        const form_data = new FormData();
-        form_data.append('image', blob, 'card.png');
-
-        const res  = await fetch(`https://upload.jinninghuiguan.cn`, {
-          method: 'POST',
-          body: form_data,
-        });
-        const data = await res.json();
-
-        clearInterval(step_timer);
-        if (document.body.contains(loading_mask)) {
-          document.body.removeChild(loading_mask);
+  
+      const loading_mask = document.createElement('div');
+      loading_mask.style.cssText = `
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,0.82);
+        backdrop-filter:blur(4px);
+        -webkit-backdrop-filter:blur(4px);
+        z-index:9999;
+        display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:28px;
+        font-family:system-ui,-apple-system,sans-serif;
+      `;
+  
+      loading_mask.innerHTML = `
+        <style>
+          @keyframes zsc_spin {
+            to { transform: rotate(360deg); }
+          }
+          @keyframes zsc_fade {
+            from { opacity:0; }
+            to   { opacity:1; }
+          }
+          @keyframes zsc_progress {
+            0%  { width:0%; }
+            30% { width:40%; }
+            65% { width:70%; }
+            85% { width:88%; }
+            100%{ width:95%; }
+          }
+        </style>
+  
+        <div style="
+          display:flex;flex-direction:column;align-items:center;gap:28px;
+          animation:zsc_fade 0.25s ease;
+        ">
+          <!-- 转圈 -->
+          <div style="
+            width:40px;height:40px;border-radius:50%;
+            border:2px solid rgba(255,255,255,0.1);
+            border-top-color:#3e8868;
+            animation:zsc_spin 0.9s linear infinite;
+          "></div>
+  
+          <!-- 文字 -->
+          <div style="text-align:center;">
+            <div style="color:#fff;font-size:16px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">
+              证件制作中
+            </div>
+            <div id="zsc_step" style="
+              color:rgba(255,255,255,0.4);font-size:12px;letter-spacing:1px;
+              transition:opacity 0.15s;
+            ">正在校验种族信息...</div>
+          </div>
+  
+          <!-- 进度条 -->
+          <div style="width:180px;height:2px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+            <div style="
+              height:100%;background:#3e8868;border-radius:999px;
+              animation:zsc_progress 8s ease forwards;
+            "></div>
+          </div>
+        </div>
+      `;
+  
+      document.body.appendChild(loading_mask);
+  
+      const steps = [
+        '正在校验种族信息...',
+        '能力信息备案中...',
+        '正在进行电子归档...',
+        '即将完成...',
+      ];
+      let step_i = 0;
+      const step_el = loading_mask.querySelector('#zsc_step');
+      const step_timer = setInterval(() => {
+        if (step_i < steps.length - 1) {
+          step_i++;
+          step_el.style.opacity = '0';
+          setTimeout(() => {
+            step_el.innerText = steps[step_i];
+            step_el.style.opacity = '1';
+          }, 150);
+        } else {
+          clearInterval(step_timer);
         }
-
-        if (data.success) {
+      }, 500);
+  
+      // 上传到 ImgBB
+      canvas.toBlob(async (blob) => {
+        try {
+          const form_data = new FormData();
+          form_data.append('image', blob, 'card.png');
+  
+          const res  = await fetch(`https://upload.jinninghuiguan.cn`, {
+            method: 'POST',
+            body: form_data,
+          });
+          const data = await res.json();
+  
+          clearInterval(step_timer);
+          if (document.body.contains(loading_mask)) {
+            document.body.removeChild(loading_mask);
+          }
+  
+          if (data.success) {
+            const img_mask = document.createElement('div');
+            img_mask.style.cssText = `
+              position:fixed;top:0;left:0;width:100%;height:100%;
+              background:rgba(0,0,0,0.92);
+              backdrop-filter:blur(4px);
+              -webkit-backdrop-filter:blur(4px);
+              z-index:9999;
+              display:flex;flex-direction:column;
+              align-items:center;justify-content:center;gap:20px;
+              padding:16px;box-sizing:border-box;
+              font-family:system-ui,-apple-system,sans-serif;
+              animation:zsc_fade 0.25s ease;
+            `;
+            img_mask.innerHTML = `
+              <style>
+                @keyframes zsc_fade {
+                  from { opacity:0; }
+                  to   { opacity:1; }
+                }
+              </style>
+  
+              <div style="color:#fff;font-size:15px;font-weight:500;letter-spacing:1px;">
+                长按图片保存
+              </div>
+  
+              <img src="${data.data.url}" style="
+                max-width:100%;max-height:65vh;
+                border-radius:8px;
+                box-shadow:0 4px 24px rgba(0,0,0,0.4);
+              "/>
+  
+              <button onclick="this.closest('div').remove()" style="
+                padding:10px 36px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
+                background:transparent;color:rgba(255,255,255,0.7);
+                font-size:14px;cursor:pointer;letter-spacing:1px;
+              ">关闭</button>
+            `;
+            document.body.appendChild(img_mask);
+  
+          } else {
+            throw new Error('上传失败');
+          }
+        } catch (err) {
+          console.error(err);
+          clearInterval(step_timer);
+          if (document.body.contains(loading_mask)) {
+            document.body.removeChild(loading_mask);
+          }
+  
+          // 备用机制：直接从本地 Canvas 生成 Base64 图像，不走网络
+          const local_url = canvas.toDataURL('image/png');
+  
           const img_mask = document.createElement('div');
           img_mask.style.cssText = `
             position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.92);
+            background:rgba(0,0,0,0.96);
             backdrop-filter:blur(4px);
             -webkit-backdrop-filter:blur(4px);
             z-index:9999;
             display:flex;flex-direction:column;
-            align-items:center;justify-content:center;gap:20px;
+            align-items:center;justify-content:center;gap:16px;
             padding:16px;box-sizing:border-box;
             font-family:system-ui,-apple-system,sans-serif;
             animation:zsc_fade 0.25s ease;
@@ -1117,39 +1167,78 @@ function App() {
                 from { opacity:0; }
                 to   { opacity:1; }
               }
+              .zsc-rotated {
+                transform: rotate(90deg) translate3d(0, 0, 0);
+                -webkit-transform: rotate(90deg) translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                max-width: 85vh !important; 
+                max-height: 85vw !important; 
+                object-fit: contain;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+              }
+              .zsc-normal {
+                max-width: 100%;
+                max-height: 65vh;
+                object-fit: contain;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+              }
             </style>
-
-            <div style="color:#fff;font-size:15px;font-weight:500;letter-spacing:1px;">
-              长按图片保存
+  
+            <div style="text-align:center;color:#fff;">
+              <div style="font-size:16px;font-weight:600;color:#ff7875;margin-bottom:4px;">
+                证件制作完毕，因平台限制，请手动截图保存
+              </div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.6);">
+                或者点击右上角通过浏览器打开即可正常使用
+              </div>
             </div>
-
-            <img src="${data.data.url}" style="
-              max-width:100%;max-height:65vh;
-              border-radius:8px;
-              box-shadow:0 4px 24px rgba(0,0,0,0.4);
-            "/>
-
-            <button onclick="this.closest('div').remove()" style="
-              padding:10px 36px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
-              background:transparent;color:rgba(255,255,255,0.7);
-              font-size:14px;cursor:pointer;letter-spacing:1px;
-            ">关闭</button>
+  
+            <div style="display:flex;align-items:center;justify-content:center;flex:1;width:100%;overflow:hidden;">
+              <img id="zsc_preview_img" src="${local_url}" class="zsc-rotated" style="
+                transition: transform 0.3s ease;
+                border-radius:8px;
+                box-shadow:0 4px 24px rgba(0,0,0,0.5);
+              "/>
+            </div>
+  
+            <div style="display:flex;gap:12px;margin-bottom:8px;">
+              <button id="zsc_rotate_btn" style="
+                padding:10px 20px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);
+                background:rgba(255,255,255,0.1);color:#fff;
+                font-size:13px;cursor:pointer;letter-spacing:1px;
+              ">还原方向</button>
+              
+              <button onclick="this.closest('div').parentElement.remove()" style="
+                padding:10px 36px;border-radius:6px;border:none;
+                background:#3e8868;color:#fff;
+                font-size:13px;cursor:pointer;font-weight:600;letter-spacing:1px;
+              ">关闭</button>
+            </div>
           `;
           document.body.appendChild(img_mask);
-
-        } else {
-          throw new Error('上传失败');
+  
+          // 旋转切换方便截图
+          const img_el = img_mask.querySelector('#zsc_preview_img');
+          const btn_el = img_mask.querySelector('#zsc_rotate_btn');
+          let is_rotated = true;
+          btn_el.onclick = () => {
+            is_rotated = !is_rotated;
+            if (is_rotated) {
+              img_el.className = 'zsc-rotated';
+              btn_el.innerText = '还原方向';
+            } else {
+              img_el.className = 'zsc-normal';
+              btn_el.innerText = '旋转 90° 截图';
+            }
+          };
+  
+          message.warning('证件已生成，但因平台限制，请截图保存');
         }
-      } catch (err) {
-        console.error(err);
-        clearInterval(step_timer);
-        if (document.body.contains(loading_mask)) {
-          document.body.removeChild(loading_mask);
-        }
-        message.error('证件已生成，但因平台限制，请截图保存');
-      }
-    }, 'image/png');
-  };
+      }, 'image/png');
+    };
   
   const load_bg_from_url = (url) => {
     if (!url) {
@@ -1420,6 +1509,16 @@ function App() {
                       ))}
                     </Select>
                   </Form.Item>
+                  <Form.Item noStyle shouldUpdate={(p, c) => p.guild !== c.guild}>
+                    {({ getFieldValue }) => getFieldValue('guild') === '其他' ? (
+                      <Input 
+                        placeholder="请输入会馆名称" 
+                        value={guild_other_text}
+                        onChange={e => set_guild_other_text(e.target.value)}
+                        style={{ borderRadius: 6, marginTop: -12, marginBottom: 16 }} 
+                      />
+                    ) : null}
+                  </Form.Item>
 
                   <div style={{
                     marginBottom: 20,
@@ -1472,7 +1571,7 @@ function App() {
                               value={ability?.[0] || undefined}
                               onChange={val => handle_ability_change(index, [val, null, ability?.[2] || ''])}
                               placeholder="系别" 
-                              style={{ width: 110 }}
+                              style={{ width: 115 }}
                               virtual={false}
                               getPopupContainer={(triggerNode) => triggerNode.parentNode}
                               dropdownStyle={{ overscrollBehavior: 'contain' }}
@@ -1484,8 +1583,8 @@ function App() {
                             <AutoComplete
                               value={ability?.[1] || undefined}
                               onChange={val => handle_ability_change(index, [ability[0], val || null, ability?.[2] || ''])}
-                              placeholder="属性"
-                              style={{ width: 90 }}
+                              placeholder="属性(可自拟)"
+                              style={{ width: 115 }}
                               options={[
                                 { value: '金' },
                                 { value: '木' },
@@ -1501,7 +1600,7 @@ function App() {
                             <Input 
                               value={ability?.[2] || ''}
                               onChange={e => handle_ability_change(index, [ability?.[0], ability?.[1], e.target.value])}
-                              placeholder="能力名称" 
+                              placeholder="能力名称（可选）" 
                               style={{ flex: 1, minWidth: 120, borderRadius: 6 }} 
                             />
                             <Button 
@@ -1530,7 +1629,7 @@ function App() {
                             <Input 
                               value={ability?.[2] || ''}
                               onChange={e => handle_ability_change(index, [ability?.[0], ability?.[1], e.target.value])}
-                              placeholder="能力名称（可选）" 
+                              placeholder="能力名称" 
                               style={{ flex: 1, borderRadius: 6 }} 
                             />
                             <Button 
