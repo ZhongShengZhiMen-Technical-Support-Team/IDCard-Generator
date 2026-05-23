@@ -284,7 +284,7 @@ const draw_round_rect = (ctx, x, y, w, h, r) => {
   ctx.closePath();
 };
 
-function CustomDatePicker({ value, onChange, token, isDark }) {
+function CustomDatePicker({ value, onChange, token }) {
   const today = dayjs();
   const init_ry = value ? value.real_year : today.year();
   const init_m = value ? value.month : today.month() + 1;
@@ -687,7 +687,6 @@ function App() {
   const [selected_abilities, set_selected_abilities] = useState([]);
   const [date_mode, set_date_mode] = useState('solar');
   const [cert_number, set_cert_number] = useState('—');
-  const [guild_other_text, set_guild_other_text] = useState('');
   const [birth_date, set_birth_date] = useState(null);
   const [birth_hour, set_birth_hour] = useState(null);
 
@@ -1141,6 +1140,7 @@ function App() {
           throw new Error('上传失败');
         }
       } catch (err) {
+        console.error(err);
         clearInterval(step_timer);
         if (document.body.contains(loading_mask)) {
           document.body.removeChild(loading_mask);
