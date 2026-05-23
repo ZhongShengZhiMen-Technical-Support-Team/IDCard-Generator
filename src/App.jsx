@@ -1571,7 +1571,7 @@ function App() {
                               value={ability?.[0] || undefined}
                               onChange={val => handle_ability_change(index, [val, null, ability?.[2] || ''])}
                               placeholder="系别" 
-                              style={{ width: 110 }}
+                              style={{ width: 115 }}
                               virtual={false}
                               getPopupContainer={(triggerNode) => triggerNode.parentNode}
                               dropdownStyle={{ overscrollBehavior: 'contain' }}
@@ -1584,7 +1584,7 @@ function App() {
                               value={ability?.[1] || undefined}
                               onChange={val => handle_ability_change(index, [ability[0], val || null, ability?.[2] || ''])}
                               placeholder="属性(可自拟)"
-                              style={{ width: 110 }}
+                              style={{ width: 115 }}
                               options={[
                                 { value: '金' },
                                 { value: '木' },
