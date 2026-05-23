@@ -1484,8 +1484,8 @@ function App() {
                             <AutoComplete
                               value={ability?.[1] || undefined}
                               onChange={val => handle_ability_change(index, [ability[0], val || null, ability?.[2] || ''])}
-                              placeholder="属性"
-                              style={{ width: 90 }}
+                              placeholder="属性(可自拟)"
+                              style={{ width: 110 }}
                               options={[
                                 { value: '金' },
                                 { value: '木' },
