@@ -1168,13 +1168,22 @@ function App() {
                 to   { opacity:1; }
               }
               .zsc-rotated {
-                transform: rotate(90deg);
+                transform: rotate(90deg) translate3d(0, 0, 0);
+                -webkit-transform: rotate(90deg) translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
                 max-width: 85vh !important; 
                 max-height: 85vw !important; 
+                object-fit: contain;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
               }
               .zsc-normal {
                 max-width: 100%;
                 max-height: 65vh;
+                object-fit: contain;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
               }
             </style>
   
