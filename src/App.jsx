@@ -1501,7 +1501,7 @@ function App() {
                             <Input 
                               value={ability?.[2] || ''}
                               onChange={e => handle_ability_change(index, [ability?.[0], ability?.[1], e.target.value])}
-                              placeholder="能力名称" 
+                              placeholder="能力名称（可选）" 
                               style={{ flex: 1, minWidth: 120, borderRadius: 6 }} 
                             />
                             <Button 
@@ -1530,7 +1530,7 @@ function App() {
                             <Input 
                               value={ability?.[2] || ''}
                               onChange={e => handle_ability_change(index, [ability?.[0], ability?.[1], e.target.value])}
-                              placeholder="能力名称（可选）" 
+                              placeholder="能力名称" 
                               style={{ flex: 1, borderRadius: 6 }} 
                             />
                             <Button 
