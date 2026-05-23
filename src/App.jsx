@@ -1121,7 +1121,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* 2. 已为您剔除了此处原本重复存在的旧 Form.Item (对会馆选项进行了流畅合并) */}
                   <Form.Item label={<span><BankOutlined style={{ marginRight: 4 }} />隶属会馆</span>} name="guild">
                     <Select 
                       placeholder="选择会馆" 
