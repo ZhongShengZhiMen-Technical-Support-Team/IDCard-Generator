@@ -1180,10 +1180,10 @@ function App() {
   
             <div style="text-align:center;color:#fff;">
               <div style="font-size:16px;font-weight:600;color:#ff7875;margin-bottom:4px;">
-                上传受限，已启用备用截图模式
+                证件制作完毕，因平台限制，请手动截图保存
               </div>
               <div style="font-size:12px;color:rgba(255,255,255,0.6);">
-                请直接截图保存，在相册中旋转回来即可获得超清证件
+                或者点击右上角通过浏览器打开即可正常使用
               </div>
             </div>
   
