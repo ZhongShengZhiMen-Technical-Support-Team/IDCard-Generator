@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Card, Form, Input, Button, Upload, Row, Col, Space,
-  Typography, Divider, message, Tag, Select
+  Typography, Divider, message, Tag, Select, AutoComplete
 } from 'antd';
 import {
   EyeOutlined, DownloadOutlined, ReloadOutlined, UploadOutlined,
@@ -787,9 +787,95 @@ function App() {
       return;
     }
 
-    // QQ环境：上传到imgbb
-    message.loading({ content: '正在生成图片...', key: 'upload', duration: 0 });
+    // QQ环境下提示上传到图床，用户可以长按图片保存
+    const loading_mask = document.createElement('div');
+    loading_mask.style.cssText = `
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.82);
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+      z-index:9999;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:28px;
+      font-family:system-ui,-apple-system,sans-serif;
+    `;
 
+    loading_mask.innerHTML = `
+      <style>
+        @keyframes zsc_spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes zsc_fade {
+          from { opacity:0; }
+          to   { opacity:1; }
+        }
+        @keyframes zsc_progress {
+          0%  { width:0%; }
+          30% { width:40%; }
+          65% { width:70%; }
+          85% { width:88%; }
+          100%{ width:95%; }
+        }
+      </style>
+
+      <div style="
+        display:flex;flex-direction:column;align-items:center;gap:28px;
+        animation:zsc_fade 0.25s ease;
+      ">
+        <!-- 转圈 -->
+        <div style="
+          width:40px;height:40px;border-radius:50%;
+          border:2px solid rgba(255,255,255,0.1);
+          border-top-color:#3e8868;
+          animation:zsc_spin 0.9s linear infinite;
+        "></div>
+
+        <!-- 文字 -->
+        <div style="text-align:center;">
+          <div style="color:#fff;font-size:16px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">
+            证件制作中
+          </div>
+          <div id="zsc_step" style="
+            color:rgba(255,255,255,0.4);font-size:12px;letter-spacing:1px;
+            transition:opacity 0.15s;
+          ">正在校验种族信息...</div>
+        </div>
+
+        <!-- 进度条 -->
+        <div style="width:180px;height:2px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
+          <div style="
+            height:100%;background:#3e8868;border-radius:999px;
+            animation:zsc_progress 8s ease forwards;
+          "></div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(loading_mask);
+
+
+    const steps = [
+      '正在校验种族信息...',
+      '能力信息备案中...',
+      '正在进行电子归档...',
+      '即将完成...',
+    ];
+    let step_i = 0;
+    const step_el = loading_mask.querySelector('#zsc_step');
+    const step_timer = setInterval(() => {
+      if (step_i < steps.length - 1) {
+        step_i++;
+        step_el.style.opacity = '0';
+        setTimeout(() => {
+          step_el.innerText = steps[step_i];
+          step_el.style.opacity = '1';
+        }, 150);
+      } else {
+        clearInterval(step_timer);
+      }
+    }, 500);
+
+    // 上传到 ImgBB
     canvas.toBlob(async (blob) => {
       try {
         const form_data = new FormData();
@@ -801,35 +887,60 @@ function App() {
         });
         const data = await res.json();
 
-        if (data.success) {
-          message.destroy('upload');
+        clearInterval(step_timer);
+        if (document.body.contains(loading_mask)) {
+          document.body.removeChild(loading_mask);
+        }
 
-          const mask = document.createElement('div');
-          mask.style.cssText = `
+        if (data.success) {
+          const img_mask = document.createElement('div');
+          img_mask.style.cssText = `
             position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.92);z-index:9999;
+            background:rgba(0,0,0,0.92);
+            backdrop-filter:blur(4px);
+            -webkit-backdrop-filter:blur(4px);
+            z-index:9999;
             display:flex;flex-direction:column;
-            align-items:center;justify-content:center;gap:16px;
+            align-items:center;justify-content:center;gap:20px;
             padding:16px;box-sizing:border-box;
+            font-family:system-ui,-apple-system,sans-serif;
+            animation:zsc_fade 0.25s ease;
           `;
-          mask.innerHTML = `
-            <p style="color:#fff;font-size:16px;font-weight:600;margin:0">
-              请长按图片保存
-            </p>
-            <img src="${data.data.url}" style="max-width:100%;max-height:65vh;border-radius:8px"/>
-            <button onclick="this.parentElement.remove()" style="
-              padding:10px 32px;border-radius:8px;border:none;
-              background:#fff;font-size:15px;cursor:pointer;
+          img_mask.innerHTML = `
+            <style>
+              @keyframes zsc_fade {
+                from { opacity:0; }
+                to   { opacity:1; }
+              }
+            </style>
+
+            <div style="color:#fff;font-size:15px;font-weight:500;letter-spacing:1px;">
+              长按图片保存
+            </div>
+
+            <img src="${data.data.url}" style="
+              max-width:100%;max-height:65vh;
+              border-radius:8px;
+              box-shadow:0 4px 24px rgba(0,0,0,0.4);
+            "/>
+
+            <button onclick="this.closest('div').remove()" style="
+              padding:10px 36px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
+              background:transparent;color:rgba(255,255,255,0.7);
+              font-size:14px;cursor:pointer;letter-spacing:1px;
             ">关闭</button>
           `;
-          document.body.appendChild(mask);
+          document.body.appendChild(img_mask);
 
         } else {
           throw new Error('上传失败');
         }
       } catch (err) {
-        console.error('上传失败:', err);
-        message.error({ content: '生成失败，请截图保存', key: 'upload' });
+        clearInterval(step_timer);
+        if (document.body.contains(loading_mask)) {
+          document.body.removeChild(loading_mask);
+        }
+        message.error('证件已生成，但因平台限制，请截图保存');
       }
     }, 'image/png');
   };
@@ -1010,14 +1121,7 @@ function App() {
                     </div>
                   </div>
 
-                  <Form.Item label={<span><BankOutlined style={{ marginRight: 4 }} />隶属会馆</span>} name="guild">
-                    <Select placeholder="选择会馆" style={{ borderRadius: 6 }}>
-                      <Select.Option value="—">—</Select.Option>
-                      {GUILD_LIST.map(g => (
-                        <Select.Option key={g.value} value={g.value}>{g.label}</Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
+                  {/* 2. 已为您剔除了此处原本重复存在的旧 Form.Item (对会馆选项进行了流畅合并) */}
                   <Form.Item label={<span><BankOutlined style={{ marginRight: 4 }} />隶属会馆</span>} name="guild">
                     <Select 
                       placeholder="选择会馆" 
@@ -1055,7 +1159,11 @@ function App() {
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <Select value={ability?.[0] || undefined}
                               onChange={val => handle_ability_change(index, [val, null, ability?.[2] || ''])}
-                              placeholder="系别" style={{ width: 110 }}>
+                              placeholder="系别" style={{ width: 110 }}
+                              virtual={false}
+                              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+                              dropdownStyle={{ overscrollBehavior: 'contain' }}
+                            >
                               {ABILITY_OPTIONS.map(opt => (
                                 <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                               ))}
@@ -1087,7 +1195,11 @@ function App() {
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <Select value={ability?.[0] || undefined}
                               onChange={val => handle_ability_change(index, [val, null, ability?.[2] || ''])}
-                              placeholder="系别" style={{ width: 110 }}>
+                              placeholder="系别" style={{ width: 110 }}
+                              virtual={false}
+                              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+                              dropdownStyle={{ overscrollBehavior: 'contain' }}
+                            >
                               {ABILITY_OPTIONS.map(opt => (
                                 <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                               ))}
