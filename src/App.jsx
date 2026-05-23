@@ -945,7 +945,12 @@ function App() {
                   <Row gutter={16}>
                     <Col span={12}>
                       <Form.Item label={<span><ManOutlined style={{ marginRight: 4 }} />性别</span>} name="gender">
-                        <Select style={{ borderRadius: 6 }}>
+                        <Select 
+                          style={{ borderRadius: 6 }}
+                          virtual={false}
+                          getPopupContainer={(triggerNode) => triggerNode.parentNode}
+                          dropdownStyle={{ overscrollBehavior: 'contain' }}
+                        >
                           {['—','无','男','女','其他'].map(g => (
                             <Select.Option key={g} value={g}>{g}</Select.Option>
                           ))}
@@ -968,8 +973,16 @@ function App() {
                         <CustomDatePicker value={birth_date} onChange={v => set_birth_date(v)} />
                       </div>
                       {date_mode === 'bazi' && (
-                        <Select value={birth_hour} onChange={v => set_birth_hour(v ?? null)}
-                          placeholder="时辰" style={{ width: 150 }} allowClear>
+                        <Select 
+                          value={birth_hour} 
+                          onChange={v => set_birth_hour(v ?? null)}
+                          placeholder="时辰" 
+                          style={{ width: 150 }} 
+                          allowClear
+                          virtual={false}
+                          getPopupContainer={(triggerNode) => triggerNode.parentNode}
+                          dropdownStyle={{ overscrollBehavior: 'contain' }}
+                        >
                           {hour_options.map(o => (
                             <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
                           ))}
@@ -1005,12 +1018,19 @@ function App() {
                       ))}
                     </Select>
                   </Form.Item>
-                  <Form.Item noStyle shouldUpdate={(p, c) => p.guild !== c.guild}>
-                    {({ getFieldValue }) => getFieldValue('guild') === '其他' ? (
-                      <Input placeholder="请输入会馆名称" value={guild_other_text}
-                        onChange={e => set_guild_other_text(e.target.value)}
-                        style={{ borderRadius: 6, marginTop: -16, marginBottom: 16 }} />
-                    ) : null}
+                  <Form.Item label={<span><BankOutlined style={{ marginRight: 4 }} />隶属会馆</span>} name="guild">
+                    <Select 
+                      placeholder="选择会馆" 
+                      style={{ borderRadius: 6 }}
+                      virtual={false} 
+                      getPopupContainer={(triggerNode) => triggerNode.parentNode} 
+                      dropdownStyle={{ overscrollBehavior: 'contain' }} 
+                    >
+                      <Select.Option value="—">—</Select.Option>
+                      {GUILD_LIST.map(g => (
+                        <Select.Option key={g.value} value={g.value}>{g.label}</Select.Option>
+                      ))}
+                    </Select>
                   </Form.Item>
 
                   <div style={{ marginBottom: 20, padding: '10px 14px', background: '#f5f5f5', borderRadius: 8, border: '1px solid #e8e8e8' }}>
