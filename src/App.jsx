@@ -1012,8 +1012,7 @@ function App() {
             message.error('证件已生成，但因平台限制，请截图保存');
         }
       });
-    }
-  }
+  };
   const load_bg_from_url = (url) => {
     if (!url) {
       current_bg_ref.current = null;
