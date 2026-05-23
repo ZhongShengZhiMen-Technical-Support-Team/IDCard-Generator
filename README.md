@@ -1,6 +1,8 @@
 # 会馆证件生成器（ID Card Generator）
 
-一个基于 **React + Vite + Ant Design** 的证件卡生成工具：填写人物信息、选择能力、上传照片/底图，并在右侧 Canvas 实时渲染证件效果，支持导出 PNG。Github Pages 版：https://id.zscommunity.top
+一个基于 **React + Vite + Ant Design** 的证件卡生成工具：填写人物信息、选择能力、上传照片/底图，并在右侧 Canvas 实时渲染证件效果，支持导出 PNG。
+
+Github Pages 版：https://zsid.jinninghuiguan.cn
 
 ## 功能
 
@@ -11,11 +13,10 @@
   - 农历
   - 八字（四柱，支持可选出生时间）
   - 年龄
-- 能力：支持多条能力记录（御灵系支持“金木水火土”二级属性）
+- 能力：支持多条能力记录（御灵系支持 `金木水火土` 二级属性）
 - 证件照片上传/移除
 - 底图 URL 或本地上传、并可移除
-- 证件编号自动生成：`会馆代号-随机5位数字`（例如 `CN-45273`）
-- Canvas 实时预览 + 一键下载 PNG
+- 手机 / 小屏幕环境下弹出图片预览而不是直接下载
 
 ## 技术栈
 
@@ -39,6 +40,7 @@ node -v
 npm -v
 ```
 
+
 ## 安装依赖 & 构建项目
 
 ```bash
@@ -50,22 +52,55 @@ npm run build
 
 # 使用方法
 
-## 1. `Clone` 仓库
+## 生产环境
+
+### 1. `Clone` 仓库
+
+我们不推荐下载仓库归档文件（Download ZIP）。
 
 ```bash
 git clone https://github.com/ZhongShengZhiMen-Technical-Support-Team/IDCard-Generator
 ```
 
-## 2. 安装依赖 & 构建项目
+### 2. 安装依赖 & 构建项目
 
 ```bash
 npm i
-# 或 yarn
+# 或使用 yarn
+# yarn i
 npm run build
+# 或使用 yarn
+# yarn build
 ```
 
-## 3. 启动
+### 3. 启动
 
 ```bash
 npm start
+```
+
+## 开发环境
+
+### 1. `Clone` 仓库
+
+我们不推荐下载仓库归档文件（Download ZIP）。
+
+```bash
+git clone https://github.com/ZhongShengZhiMen-Technical-Support-Team/IDCard-Generator
+```
+
+### 2. 安装依赖
+
+```bash
+npm i
+# 或使用 yarn
+# yarn i
+```
+
+### 3. 启动
+
+```bash
+npm run dev
+# 或使用 yarn
+# yarn dev
 ```
