@@ -687,7 +687,7 @@ function App() {
   const [selected_abilities, set_selected_abilities] = useState([]);
   const [date_mode, set_date_mode] = useState('solar');
   const [cert_number, set_cert_number] = useState('—');
-  const [guild_other_text] = useState('');
+  const [guild_other_text, set_guild_other_text] = useState('');
   const [birth_date, set_birth_date] = useState(null);
   const [birth_hour, set_birth_hour] = useState(null);
 
@@ -1419,6 +1419,16 @@ function App() {
                         <Select.Option key={g.value} value={g.value}>{g.label}</Select.Option>
                       ))}
                     </Select>
+                  </Form.Item>
+                  <Form.Item noStyle shouldUpdate={(p, c) => p.guild !== c.guild}>
+                    {({ getFieldValue }) => getFieldValue('guild') === '其他' ? (
+                      <Input 
+                        placeholder="请输入会馆名称" 
+                        value={guild_other_text}
+                        onChange={e => set_guild_other_text(e.target.value)}
+                        style={{ borderRadius: 6, marginTop: -12, marginBottom: 16 }} 
+                      />
+                    ) : null}
                   </Form.Item>
 
                   <div style={{
