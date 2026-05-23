@@ -995,20 +995,11 @@ function App() {
         try {
           const reader = new FileReader();
           reader.onload = async (e) => {
-            clearInterval(step_timer);
-            if (document.body.contains(loading_mask)) {
-              document.body.removeChild(loading_mask);
-            }
-
             const base64 = e.target.result;
             Fancybox.show([{ src: base64, type: 'image' }]);
           };
           reader.readAsDataURL(blob);
         } catch (err) {
-            clearInterval(step_timer);
-            if (document.body.contains(loading_mask)) {
-              document.body.removeChild(loading_mask);
-            }
             message.error('证件已生成，但因平台限制，请截图保存');
         }
       });
