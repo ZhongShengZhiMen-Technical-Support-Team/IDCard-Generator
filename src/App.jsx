@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Card, Form, Input, Button, Upload, Row, Col, Space,
-  Typography, Divider, message, Tag, Select, AutoComplete
+  Typography, Divider, message, Tag, Select, AutoComplete, theme
 } from 'antd';
 import {
   EyeOutlined, DownloadOutlined, ReloadOutlined, UploadOutlined,
@@ -17,6 +17,7 @@ import '@fancyapps/ui/dist/fancybox/fancybox.css';
 import { Solar } from 'lunar-javascript';
 
 const { Text } = Typography;
+const { useToken } = theme;
 
 const CANVAS_WIDTH = 900;
 const CANVAS_HEIGHT = 600;
@@ -79,13 +80,9 @@ const MONTH_NAMES = [
 ];
 const WEEK_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
 
-// 五虎遁年起月：年干(index%5) → 寅月天干起始index
 const YUE_GAN_START = [2, 4, 6, 8, 0];
-
-// 五鼠遁日起时：日干(index%5) → 子时天干起始index
 const SHI_GAN_START = [0, 2, 4, 6, 8];
 
-// 儒略日基准：2000-01-01 = JD 2451545
 const BASE_JD = 2451545;
 const BASE_GZ_INDEX = (() => {
   try {
@@ -101,7 +98,6 @@ const BASE_GZ_INDEX = (() => {
   return 16;
 })();
 
-// 公历→儒略日，支持公元前（内部转天文年，公元前1年=天文0年）
 const date_to_jd = (real_year, month, day) => {
   const y = real_year > 0 ? real_year : real_year + 1;
   const is_gregorian = y > 1582 || 
@@ -121,11 +117,9 @@ const date_to_jd = (real_year, month, day) => {
     Math.floor(yr / 4) - 32083;
 };
 
-// 儒略日→60甲子序号
 const jd_to_day_gz_index = (jd) =>
   ((BASE_GZ_INDEX + (jd - BASE_JD)) % 60 + 60) % 60;
 
-// 范围外年干支：以2月4日近似立春切年，甲子年=公元4年
 const get_year_gz_index_approx = (real_year, month, day) => {
   const gz_year = (month < 2 || (month === 2 && day < 4)) ? real_year - 1 : real_year;
   const astro = gz_year > 0 ? gz_year : gz_year === 0 ? -1 : gz_year + 1;
@@ -135,7 +129,6 @@ const get_year_gz_index_approx = (real_year, month, day) => {
   };
 };
 
-// 日历显示用年干支（按公历年，不切立春）
 const get_ganzhi_year_for_display = (real_year) => {
   const astro = real_year > 0 ? real_year : real_year + 1;
   const g = ((astro - 4) % 10 + 10) % 10;
@@ -143,33 +136,28 @@ const get_ganzhi_year_for_display = (real_year) => {
   return `${TIAN_GAN[g]}${DI_ZHI[z]}`;
 };
 
-// 各月节气近似日（index=month-1），用于范围外月柱推算
 const JIEQI_APPROX = [6, 4, 6, 5, 6, 6, 7, 7, 8, 8, 7, 7];
 
-// 范围外月干支：节气近似切月 + 五虎遁推月干
 const get_month_gz_approx = (real_year, month, day) => {
   const { gan_index: ygi } = get_year_gz_index_approx(real_year, month, day);
   const before = day < JIEQI_APPROX[month - 1];
-  const jm0 = before ? ((month - 2 + 12) % 12) : ((month - 1) % 12); // 节气月索引，0=寅月
-  const zhi_idx = (jm0 + 2) % 12; // 寅=2
+  const jm0 = before ? ((month - 2 + 12) % 12) : ((month - 1) % 12);
+  const zhi_idx = (jm0 + 2) % 12;
   const gan_idx = (YUE_GAN_START[ygi % 5] + jm0) % 10;
   return `${TIAN_GAN[gan_idx]}${DI_ZHI[zhi_idx]}`;
 };
 
-// 时辰索引：晚子时(23点)归当日
 const hour_to_shichen_index = (hour) => {
   if (hour === 23) return 0;
   return Math.floor((hour + 1) / 2);
 };
 
-// 五鼠遁推时间干支
 const get_hour_gz = (day_gz_index, hour) => {
   const ri = day_gz_index % 10;
   const shi = hour_to_shichen_index(hour);
   return `${TIAN_GAN[(SHI_GAN_START[ri % 5] + shi) % 10]}${DI_ZHI[shi]}`;
 };
 
-// 范围外伪农历：干支准确，月日近似，保证格式合理
 const fake_lunar_month_day = (real_year, month, day) => {
   const seed = ((Math.abs(real_year) * 31 + month * 7 + day) % 100 + 100) % 100;
   let fm = month - 1 - (seed % 2);
@@ -181,15 +169,14 @@ const fake_lunar_month_day = (real_year, month, day) => {
   return { lunar_month: fm, lunar_day: fd };
 };
 
-// 主转换：1900-2100年参照库精确计算，范围外用近似公式
 const get_bazi_and_lunar = (real_year, month, day, hour = null) => {
   if (real_year >= 1900 && real_year <= 2100) {
     try {
       const solar = Solar.fromYmd(real_year, month, day);
       const lunar = solar.getLunar();
-      const yg = lunar.getYearGanByLiChun(); // 按立春切年
+      const yg = lunar.getYearGanByLiChun();
       const yz = lunar.getYearZhiByLiChun();
-      const mg = lunar.getMonthGan(); // 按节气切月
+      const mg = lunar.getMonthGan();
       const mz = lunar.getMonthZhi();
       const dg = lunar.getDayGan();
       const dz = lunar.getDayZhi();
@@ -201,7 +188,7 @@ const get_bazi_and_lunar = (real_year, month, day, hour = null) => {
         hour_gz = `${TIAN_GAN[(SHI_GAN_START[ri % 5] + shi) % 10]}${DI_ZHI[shi]}`;
       }
       
-      const lm = Math.abs(lunar.getMonth()); // 闰月为负，取绝对值
+      const lm = Math.abs(lunar.getMonth());
       const ld = lunar.getDay();
       
       return {
@@ -297,28 +284,7 @@ const draw_round_rect = (ctx, x, y, w, h, r) => {
   ctx.closePath();
 };
 
-const nav_btn_style = {
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: 13,
-  color: '#595959',
-  padding: '2px 5px',
-  borderRadius: 4,
-  lineHeight: 1,
-  fontWeight: 600,
-};
-
-const text_btn_style = {
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: 12,
-  padding: '2px 4px',
-  fontWeight: 500,
-};
-
-function CustomDatePicker({ value, onChange }) {
+function CustomDatePicker({ value, onChange, token, isDark }) {
   const today = dayjs();
   const init_ry = value ? value.real_year : today.year();
   const init_m = value ? value.month : today.month() + 1;
@@ -448,6 +414,31 @@ function CustomDatePicker({ value, onChange }) {
   const selected_day = value && value.real_year === real_year && value.month === month ? value.day : null;
   const gz_label = get_ganzhi_year_for_display(real_year);
 
+  const nav_btn_style = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: 13,
+    color: token.colorTextSecondary,
+    padding: '2px 5px',
+    borderRadius: 4,
+    lineHeight: 1,
+    fontWeight: 600,
+  };
+
+  const text_btn_style = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: 12,
+    padding: '2px 4px',
+    fontWeight: 500,
+  };
+
+  const bcBtnBorderColor = is_bc ? '#ff7875' : token.colorPrimary;
+  const bcBtnBg = is_bc ? token.colorBgContainer : `${token.colorPrimary}15`;
+  const bcBtnColor = is_bc ? '#ff4d4f' : token.colorPrimary;
+
   return (
     <div ref={ref} style={{ position: 'relative', width: '100%' }}>
       <div 
@@ -459,15 +450,15 @@ function CustomDatePicker({ value, onChange }) {
           padding: '4px 11px',
           borderRadius: 6,
           cursor: 'pointer',
-          border: open ? '1px solid #3e8868' : '1px solid #d9d9d9',
-          background: '#fff',
+          border: open ? `1px solid ${token.colorPrimary}` : `1px solid ${token.colorBorderSecondary}`,
+          background: token.colorBgContainer,
           minHeight: 32,
-          boxShadow: open ? '0 0 0 2px rgba(62,136,104,0.1)' : 'none',
+          boxShadow: open ? `0 0 0 2px ${token.colorPrimary}18` : 'none',
           transition: 'all 0.2s',
         }}
       >
-        <CalendarOutlined style={{ color: '#bfbfbf', fontSize: 13 }} />
-        <span style={{ flex: 1, fontSize: 14, color: display_str ? '#1a1a1a' : '#bfbfbf' }}>
+        <CalendarOutlined style={{ color: token.colorTextQuaternary, fontSize: 13 }} />
+        <span style={{ flex: 1, fontSize: 14, color: display_str ? token.colorText : token.colorTextQuaternary }}>
           {display_str || '选择出生日期'}
         </span>
       </div>
@@ -478,15 +469,19 @@ function CustomDatePicker({ value, onChange }) {
           top: 38,
           left: 0,
           zIndex: 1000,
-          background: '#fff',
+          background: token.colorBgElevated,
           borderRadius: 10,
-          boxShadow: '0 6px 24px rgba(0,0,0,0.12)',
-          border: '1px solid #f0f0f0',
+          boxShadow: token.boxShadowSecondary,
+          border: `1px solid ${token.colorBorderSecondary}`,
           width: 300,
           overflow: 'hidden',
           userSelect: 'none',
         }}>
-          <div style={{ padding: '10px 12px', background: '#f8faf7', borderBottom: '1px solid #f0f0f0' }}>
+          <div style={{ 
+            padding: '10px 12px', 
+            background: token.colorBgLayout, 
+            borderBottom: `1px solid ${token.colorBorderSecondary}` 
+          }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -512,9 +507,9 @@ function CustomDatePicker({ value, onChange }) {
                     padding: '2px 6px',
                     borderRadius: 4,
                     cursor: 'pointer',
-                    border: '1px solid ' + (is_bc ? '#ff7875' : '#3e8868'),
-                    background: is_bc ? '#fff1f0' : '#f0faf4',
-                    color: is_bc ? '#ff4d4f' : '#3e8868',
+                    border: `1px solid ${bcBtnBorderColor}`,
+                    background: bcBtnBg,
+                    color: bcBtnColor,
                     fontWeight: 600,
                   }}
                 >
@@ -532,10 +527,12 @@ function CustomDatePicker({ value, onChange }) {
                       textAlign: 'center',
                       fontSize: 15,
                       fontWeight: 700,
-                      border: '1px solid #3e8868',
+                      border: `1px solid ${token.colorPrimary}`,
                       borderRadius: 4,
                       outline: 'none',
                       padding: '1px 4px',
+                      background: token.colorBgContainer,
+                      color: token.colorText,
                     }}
                   />
                 ) : (
@@ -546,7 +543,7 @@ function CustomDatePicker({ value, onChange }) {
                       fontSize: 15,
                       fontWeight: 700,
                       cursor: 'text',
-                      color: '#1a1a1a',
+                      color: token.colorText,
                       minWidth: 40,
                       textAlign: 'center'
                     }}
@@ -554,7 +551,7 @@ function CustomDatePicker({ value, onChange }) {
                     {Math.abs(real_year)}
                   </span>
                 )}
-                <span style={{ fontSize: 14, color: '#595959' }}>年</span>
+                <span style={{ fontSize: 14, color: token.colorTextSecondary }}>年</span>
               </div>
               <div style={{ display: 'flex', gap: 2 }}>
                 <button onClick={() => change_year(1)} style={nav_btn_style} title="下一年">{'>'}</button>
@@ -562,7 +559,7 @@ function CustomDatePicker({ value, onChange }) {
                 <button onClick={() => change_year(100)} style={nav_btn_style} title="下一世纪">{'>>>'}</button>
               </div>
             </div>
-            <div style={{ textAlign: 'center', fontSize: 11, color: '#8c8c8c' }}>{gz_label}年</div>
+            <div style={{ textAlign: 'center', fontSize: 11, color: token.colorTextTertiary }}>{gz_label}年</div>
           </div>
 
           {view === 'month' ? (
@@ -578,8 +575,8 @@ function CustomDatePicker({ value, onChange }) {
                       cursor: 'pointer',
                       fontSize: 13,
                       border: 'none',
-                      background: month === i + 1 ? '#3e8868' : '#f5f5f5',
-                      color: month === i + 1 ? '#fff' : '#1a1a1a',
+                      background: month === i + 1 ? token.colorPrimary : token.colorFillSecondary,
+                      color: month === i + 1 ? '#fff' : token.colorText,
                       fontWeight: month === i + 1 ? 700 : 400,
                     }}
                   >
@@ -605,7 +602,7 @@ function CustomDatePicker({ value, onChange }) {
                     cursor: 'pointer',
                     fontSize: 14,
                     fontWeight: 600,
-                    color: '#1a1a1a'
+                    color: token.colorText
                   }}
                 >
                   {MONTH_NAMES[month - 1]}
@@ -621,7 +618,7 @@ function CustomDatePicker({ value, onChange }) {
                   <div key={w} style={{
                     textAlign: 'center',
                     fontSize: 11,
-                    color: '#8c8c8c',
+                    color: token.colorTextTertiary,
                     padding: '2px 0'
                   }}>
                     {w}
@@ -644,9 +641,9 @@ function CustomDatePicker({ value, onChange }) {
                         padding: '5px 0',
                         borderRadius: 6,
                         cursor: cell.current ? 'pointer' : 'default',
-                        border: is_today && !is_sel ? '1px solid #3e8868' : '1px solid transparent',
-                        background: is_sel ? '#3e8868' : 'none',
-                        color: is_sel ? '#fff' : cell.current ? '#1a1a1a' : '#d9d9d9',
+                        border: is_today && !is_sel ? `1px solid ${token.colorPrimary}` : '1px solid transparent',
+                        background: is_sel ? token.colorPrimary : 'none',
+                        color: is_sel ? '#fff' : cell.current ? token.colorText : token.colorTextDisabled,
                         fontSize: 12,
                         fontWeight: is_sel ? 700 : 400,
                       }}
@@ -664,10 +661,10 @@ function CustomDatePicker({ value, onChange }) {
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '8px 12px',
-            borderTop: '1px solid #f0f0f0',
-            background: '#fafafa',
+            borderTop: `1px solid ${token.colorBorderSecondary}`,
+            background: token.colorBgLayout,
           }}>
-            <button onClick={go_today} style={{ ...text_btn_style, color: '#3e8868' }}>今天</button>
+            <button onClick={go_today} style={{ ...text_btn_style, color: token.colorPrimary }}>今天</button>
             <button onClick={clear} style={{ ...text_btn_style, color: '#ff4d4f' }}>清除</button>
           </div>
         </div>
@@ -677,10 +674,10 @@ function CustomDatePicker({ value, onChange }) {
 }
 
 function App() {
+  const { token } = useToken();
   const [form] = Form.useForm();
   const canvas_ref = useRef(null);
 
-  // 图片用 ref 存储，避免 state 变化触发渲染循环
   const current_bg_ref = useRef(null);
   const photo_image_ref = useRef(null);
 
@@ -693,6 +690,17 @@ function App() {
   const [guild_other_text, set_guild_other_text] = useState('');
   const [birth_date, set_birth_date] = useState(null);
   const [birth_hour, set_birth_hour] = useState(null);
+
+  const [isDark, setIsDark] = useState(
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const issue_date_str = useMemo(() => dayjs().format('YYYY年MM月DD日'), []);
 
@@ -731,7 +739,6 @@ function App() {
       }
     }
 
-    // 能力标签：[系别, 属性, 名称] → "系别·属性·名称"
     const ability_tags = selected_abilities
       .map(ab => {
         if (!ab || !ab[0]) return null;
@@ -744,10 +751,9 @@ function App() {
 
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // 背景：有底图则叠加遮罩，否则渐变色
     if (current_bg) {
       ctx.drawImage(current_bg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      ctx.fillStyle = 'rgba(240, 238, 233, 0.55)';
+      ctx.fillStyle = isDark ? 'rgba(20, 20, 24, 0.65)' : 'rgba(240, 238, 233, 0.55)';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     } else {
       const grad = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -758,27 +764,29 @@ function App() {
     }
 
     const wgrad = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    wgrad.addColorStop(0, 'rgba(180,220,150,0.08)');
-    wgrad.addColorStop(0.5, 'rgba(200,230,160,0.25)');
-    wgrad.addColorStop(1, 'rgba(180,220,150,0.08)');
+    wgrad.addColorStop(0, isDark ? 'rgba(100,160,120,0.06)' : 'rgba(180,220,150,0.08)');
+    wgrad.addColorStop(0.5, isDark ? 'rgba(120,180,140,0.15)' : 'rgba(200,230,160,0.25)');
+    wgrad.addColorStop(1, isDark ? 'rgba(100,160,120,0.06)' : 'rgba(180,220,150,0.08)');
     ctx.fillStyle = wgrad;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // 社区大标题
+    const titleColor = '#3b5c2a';
+    const subtitleColor =  '#5e7c48';
+    const dividerColor = 'rgba(62,136,104,0.25)';
+
     ctx.font = 'bold 38px "Times New Roman","思源黑体"';
-    ctx.fillStyle = '#3b5c2a';
+    ctx.fillStyle = titleColor;
     ctx.fillText('众生之门社区', 38, 62);
     ctx.font = 'italic 16px "Segoe UI"';
-    ctx.fillStyle = '#5e7c48';
+    ctx.fillStyle = subtitleColor;
     ctx.fillText('zscommunity', 42, 85);
     ctx.beginPath();
     ctx.moveTo(38, 100);
     ctx.lineTo(CANVAS_WIDTH - 38, 100);
-    ctx.strokeStyle = 'rgba(62,136,104,0.25)';
+    ctx.strokeStyle = dividerColor;
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // 靓妖照骗
     const radius = 8;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.15)';
@@ -815,9 +823,9 @@ function App() {
       ctx.restore();
     } else {
       draw_round_rect(ctx, PHOTO_X, PHOTO_Y, PHOTO_WIDTH, PHOTO_HEIGHT, radius);
-      ctx.fillStyle = '#e8e8e8';
+      ctx.fillStyle ='#e8e8e8';
       ctx.fill();
-      ctx.fillStyle = '#8c8c8c';
+      ctx.fillStyle ='#8c8c8c';
       ctx.font = '12px "Segoe UI","Microsoft YaHei"';
       ctx.textAlign = 'center';
       ctx.fillText('证件照片', PHOTO_X + PHOTO_WIDTH / 2, PHOTO_Y + PHOTO_HEIGHT / 2 + 50);
@@ -830,7 +838,6 @@ function App() {
     ctx.stroke();
     ctx.restore();
 
-    // 右侧信息区：3行2列
     const LF = 'bold 14px "Segoe UI","PingFang SC"';
     const VF = 'bold 21px "Segoe UI","Microsoft YaHei"';
     const LC = '#2a5a3a';
@@ -862,7 +869,6 @@ function App() {
       ctx.fillText(row.v2 || '—', COL2_X, y + 26);
     });
 
-    // 能力横条分隔线
     const DIV_Y = INFO_Y + 3 * ROW_H - 10;
     ctx.beginPath();
     ctx.moveTo(INFO_X, DIV_Y);
@@ -871,7 +877,6 @@ function App() {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // 能力标签区：横向排列，超出换行
     const AB_LABEL_Y = INFO_Y + 3 * ROW_H + 16;
     ctx.font = LF;
     ctx.fillStyle = LC;
@@ -891,6 +896,9 @@ function App() {
       const AREA_W = CANVAS_WIDTH - 38 - AREA_X;
       const TAG_Y0 = AB_LABEL_Y + 8;
 
+      const tagFillColor = 'rgba(62,136,104,0.12)';
+      const tagStrokeColor = 'rgba(62,136,104,0.35)';
+
       ctx.font = TAG_FONT;
       let cx = AREA_X;
       let cy = TAG_Y0;
@@ -905,10 +913,10 @@ function App() {
         }
 
         draw_round_rect(ctx, cx, cy, tagw, TAG_H, 6);
-        ctx.fillStyle = 'rgba(62,136,104,0.12)';
+        ctx.fillStyle = tagFillColor;
         ctx.fill();
         draw_round_rect(ctx, cx, cy, tagw, TAG_H, 6);
-        ctx.strokeStyle = 'rgba(62,136,104,0.35)';
+        ctx.strokeStyle = tagStrokeColor;
         ctx.lineWidth = 1;
         ctx.stroke();
 
@@ -919,12 +927,11 @@ function App() {
       });
     }
 
-    // 底部三栏
     const BOT_DIV_Y = CANVAS_HEIGHT - 88;
     ctx.beginPath();
     ctx.moveTo(38, BOT_DIV_Y);
     ctx.lineTo(CANVAS_WIDTH - 38, BOT_DIV_Y);
-    ctx.strokeStyle = 'rgba(62,136,104,0.25)';
+    ctx.strokeStyle = dividerColor;
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -945,7 +952,7 @@ function App() {
     draw_bottom('签发日期 / Date', issue_date_str, CANVAS_WIDTH / 2, 'center');
     draw_bottom('签发机关 / Authority', '众生之门技术部', CANVAS_WIDTH - 38, 'right');
     ctx.textAlign = 'start';
-  }, [selected_abilities, date_mode, cert_number, guild_other_text, birth_date, birth_hour, issue_date_str, form]);
+  }, [selected_abilities, date_mode, cert_number, guild_other_text, birth_date, birth_hour, issue_date_str, form, isDark]);
 
   useEffect(() => { draw_card(); }, [draw_card]);
 
@@ -988,7 +995,6 @@ function App() {
       return;
     }
 
-    // QQ环境下提示上传到图床，用户可以长按图片保存
     const loading_mask = document.createElement('div');
     loading_mask.style.cssText = `
       position:fixed;
@@ -1212,31 +1218,32 @@ function App() {
       padding: '40px 24px',
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'flex-start'
+      alignItems: 'flex-start',
+      background: token.colorBgLayout,
     }}>
       <div style={{ width: '100%', maxWidth: 1200 }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
-          <IdcardOutlined style={{ fontSize: 26, color: '#3e8868', marginRight: 10 }} />
-          <span style={{ fontSize: 28, fontWeight: 600 }}>会馆证件生成器</span>
+          <IdcardOutlined style={{ fontSize: 26, color: token.colorPrimary, marginRight: 10 }} />
+          <span style={{ fontSize: 28, fontWeight: 600, color: token.colorText }}>会馆证件生成器</span>
         </div>
 
         <Row gutter={[32, 32]}>
           <Col xs={24} lg={10}>
             <Card 
               bordered={false} 
-              style={{ borderRadius: 12, border: '1px solid #f0f0f0' }} 
+              style={{ borderRadius: 12, border: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer }} 
               styles={{ body: { padding: 0 } }}
             >
               <div style={{
                 padding: '18px 24px',
-                borderBottom: '1px solid #f0f0f0',
-                background: '#fafafa',
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorBgLayout,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8
               }}>
-                <FileTextOutlined style={{ color: '#3e8868' }} />
-                <span style={{ fontWeight: 600 }}>你的档案</span>
+                <FileTextOutlined style={{ color: token.colorPrimary }} />
+                <span style={{ fontWeight: 600, color: token.colorText }}>你的档案</span>
               </div>
               <div style={{ padding: 24 }}>
                 <Form 
@@ -1247,8 +1254,8 @@ function App() {
                 >
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      <CameraOutlined style={{ color: '#595959' }} />
-                      <span style={{ fontWeight: 500, color: '#595959' }}>证件照片</span>
+                      <CameraOutlined style={{ color: token.colorTextSecondary }} />
+                      <span style={{ fontWeight: 500, color: token.colorTextSecondary }}>证件照片</span>
                       <Tag style={{ fontSize: 11 }}>可选</Tag>
                     </div>
                     <Space>
@@ -1265,7 +1272,7 @@ function App() {
                     </Space>
                   </div>
 
-                  <Divider style={{ margin: '12px 0', borderColor: '#f0f0f0' }} />
+                  <Divider style={{ margin: '12px 0', borderColor: token.colorBorderSecondary }} />
 
                   <Row gutter={16}>
                     <Col span={12}>
@@ -1315,12 +1322,12 @@ function App() {
                   </Row>
 
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: '#595959', marginBottom: 6 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: token.colorTextSecondary, marginBottom: 6 }}>
                       <CalendarOutlined style={{ marginRight: 4 }} />出生日期
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <div style={{ flex: 1 }}>
-                        <CustomDatePicker value={birth_date} onChange={v => set_birth_date(v)} />
+                        <CustomDatePicker value={birth_date} onChange={v => set_birth_date(v)} token={token} isDark={isDark} />
                       </div>
                       {date_mode === 'bazi' && (
                         <Select
@@ -1342,12 +1349,12 @@ function App() {
                   </div>
 
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6 }}>出生日期显示方式</div>
+                    <div style={{ fontSize: 12, color: token.colorTextTertiary, marginBottom: 6 }}>出生日期显示方式</div>
                     <div style={{
                       display: 'flex',
                       borderRadius: 8,
                       overflow: 'hidden',
-                      border: '1px solid #e8e8e8'
+                      border: `1px solid ${token.colorBorderSecondary}`
                     }}>
                       {date_mode_options.map((opt, idx) => (
                         <button 
@@ -1362,9 +1369,9 @@ function App() {
                             fontSize: 13,
                             cursor: 'pointer',
                             border: 'none',
-                            borderRight: idx < date_mode_options.length - 1 ? '1px solid #e8e8e8' : 'none',
-                            background: date_mode === opt.value ? '#3e8868' : '#fff',
-                            color: date_mode === opt.value ? '#fff' : '#595959',
+                            borderRight: idx < date_mode_options.length - 1 ? `1px solid ${token.colorBorderSecondary}` : 'none',
+                            background: date_mode === opt.value ? token.colorPrimary : token.colorBgContainer,
+                            color: date_mode === opt.value ? '#fff' : token.colorTextSecondary,
                             fontWeight: date_mode === opt.value ? 600 : 400,
                             transition: 'all 0.2s',
                           }}
@@ -1396,27 +1403,27 @@ function App() {
                   <div style={{
                     marginBottom: 20,
                     padding: '10px 14px',
-                    background: '#f5f5f5',
+                    background: token.colorFillSecondary,
                     borderRadius: 8,
-                    border: '1px solid #e8e8e8'
+                    border: `1px solid ${token.colorBorderSecondary}`
                   }}>
-                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>证件编号</div>
+                    <div style={{ fontSize: 12, color: token.colorTextTertiary, marginBottom: 4 }}>证件编号</div>
                     <div style={{
                       fontSize: 16,
                       fontWeight: 600,
-                      color: '#1a1a1a',
+                      color: token.colorText,
                       letterSpacing: 1
                     }}>
                       {cert_number}
                     </div>
                   </div>
 
-                  <Divider style={{ margin: '4px 0 16px', borderColor: '#f0f0f0' }} />
+                  <Divider style={{ margin: '4px 0 16px', borderColor: token.colorBorderSecondary }} />
 
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      <ThunderboltOutlined style={{ color: '#595959' }} />
-                      <span style={{ fontWeight: 500, color: '#595959' }}>能力</span>
+                      <ThunderboltOutlined style={{ color: token.colorTextSecondary }} />
+                      <span style={{ fontWeight: 500, color: token.colorTextSecondary }}>能力</span>
                     </div>
                     
                     {selected_abilities.map((ability, index) => (
@@ -1428,9 +1435,9 @@ function App() {
                           gap: 8,
                           marginBottom: 12,
                           padding: '8px 12px',
-                          background: '#fafafa',
+                          background: token.colorFillSecondary,
                           borderRadius: 8,
-                          border: '1px solid #f0f0f0',
+                          border: `1px solid ${token.colorBorderSecondary}`,
                         }}
                       >
                         {ability?.[0] === '御灵系' ? (
@@ -1525,28 +1532,28 @@ function App() {
                       style={{
                         borderRadius: 6,
                         height: 36,
-                        borderColor: '#d9d9d9',
-                        color: '#595959'
+                        borderColor: token.colorBorderSecondary,
+                        color: token.colorTextSecondary
                       }}
                     >
                       添加能力
                     </Button>
                   </div>
 
-                  <Divider style={{ margin: '16px 0', borderColor: '#f0f0f0' }} />
+                  <Divider style={{ margin: '16px 0', borderColor: token.colorBorderSecondary }} />
 
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <PictureOutlined style={{ color: '#595959' }} />
-                      <span style={{ fontWeight: 500, color: '#595959' }}>底图</span>
+                      <PictureOutlined style={{ color: token.colorTextSecondary }} />
+                      <span style={{ fontWeight: 500, color: token.colorTextSecondary }}>底图</span>
                       <Tag style={{ fontSize: 11 }}>可选</Tag>
                     </div>
-                    <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, color: token.colorTextTertiary, marginBottom: 8 }}>
                       支持输入图片URL或上传本地文件
                     </div>
                     <Form.Item name="bg_url" style={{ marginBottom: 12 }}>
                       <Input 
-                        prefix={<LinkOutlined style={{ color: '#bfbfbf' }} />}
+                        prefix={<LinkOutlined style={{ color: token.colorTextQuaternary }} />}
                         placeholder="输入图片URL地址" 
                         style={{ borderRadius: 6 }}
                         onBlur={e => { if (e.target.value) load_bg_from_url(e.target.value); }} 
@@ -1573,8 +1580,6 @@ function App() {
                       onClick={draw_card} 
                       block
                       style={{
-                        background: '#3e8868',
-                        borderColor: '#3e8868',
                         borderRadius: 6,
                         height: 40,
                         fontWeight: 500
@@ -1586,7 +1591,7 @@ function App() {
                       icon={<DownloadOutlined />} 
                       onClick={handle_download} 
                       block
-                      style={{ borderRadius: 6, height: 40, borderColor: '#d9d9d9' }}
+                      style={{ borderRadius: 6, height: 40 }}
                     >
                       保存图片
                     </Button>
@@ -1599,21 +1604,21 @@ function App() {
           <Col xs={24} lg={14}>
             <Card 
               bordered={false} 
-              style={{ borderRadius: 12, border: '1px solid #f0f0f0' }} 
+              style={{ borderRadius: 12, border: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer }} 
               styles={{ body: { padding: 0 } }}
             >
               <div style={{
                 padding: '14px 24px',
-                borderBottom: '1px solid #f0f0f0',
-                background: '#fafafa',
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorBgLayout,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8
               }}>
-                <EyeOutlined />
-                <span style={{ fontWeight: 500, color: '#595959' }}>预览</span>
+                <EyeOutlined style={{ color: token.colorTextSecondary }} />
+                <span style={{ fontWeight: 500, color: token.colorTextSecondary }}>预览</span>
               </div>
-              <div style={{ padding: 16, background: '#fafaf9' }}>
+              <div style={{ padding: 16, background: token.colorFillQuaternary }}>
                 <canvas 
                   ref={canvas_ref} 
                   width={CANVAS_WIDTH} 
@@ -1623,18 +1628,18 @@ function App() {
                     height: 'auto',
                     borderRadius: 8,
                     display: 'block',
-                    border: '1px solid #f0f0f0'
+                    border: `1px solid ${token.colorBorderSecondary}`
                   }} 
                 />
               </div>
               <div style={{
                 padding: '12px 24px',
-                borderTop: '1px solid #f0f0f0',
-                background: '#fafafa',
+                borderTop: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorBgLayout,
                 textAlign: 'center'
               }}>
-                <GlobalOutlined style={{ fontSize: 12, color: '#8c8c8c', marginRight: 6 }} />
-                <Text style={{ fontSize: 12, color: '#8c8c8c' }}>出自腾讯频道 / 众生之门社区</Text>
+                <GlobalOutlined style={{ fontSize: 12, color: token.colorTextTertiary, marginRight: 6 }} />
+                <Text style={{ fontSize: 12, color: token.colorTextTertiary }}>出自腾讯频道 / 众生之门社区</Text>
               </div>
             </Card>
           </Col>
