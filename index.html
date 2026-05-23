@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark">
     <title>众生社区</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #000;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: light) {
+        html, body {
+          background-color: #fff;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
