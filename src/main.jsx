@@ -39,4 +39,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Root />
   </React.StrictMode>
 )
-export {}
+export default {};
