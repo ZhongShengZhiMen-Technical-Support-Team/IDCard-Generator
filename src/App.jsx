@@ -687,6 +687,7 @@ function App() {
   const [selected_abilities, set_selected_abilities] = useState([]);
   const [date_mode, set_date_mode] = useState('solar');
   const [cert_number, set_cert_number] = useState('—');
+  const [guild_other_text] = useState('');
   const [birth_date, set_birth_date] = useState(null);
   const [birth_hour, set_birth_hour] = useState(null);
 
