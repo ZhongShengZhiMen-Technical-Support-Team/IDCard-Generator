@@ -284,7 +284,7 @@ const draw_round_rect = (ctx, x, y, w, h, r) => {
   ctx.closePath();
 };
 
-function CustomDatePicker({ value, onChange, token, isDark }) {
+function CustomDatePicker({ value, onChange, token }) {
   const today = dayjs();
   const init_ry = value ? value.real_year : today.year();
   const init_m = value ? value.month : today.month() + 1;
@@ -687,7 +687,7 @@ function App() {
   const [selected_abilities, set_selected_abilities] = useState([]);
   const [date_mode, set_date_mode] = useState('solar');
   const [cert_number, set_cert_number] = useState('—');
-  const [guild_other_text, set_guild_other_text] = useState('');
+  const [guild_other_text] = useState('');
   const [birth_date, set_birth_date] = useState(null);
   const [birth_hour, set_birth_hour] = useState(null);
 
@@ -978,13 +978,10 @@ function App() {
 
   const handle_download = async () => {
     const canvas = canvas_ref.current;
-    if (!canvas) {
-      message.error('画布未加载');
-      return;
-    }
+    if (!canvas) { message.error('画布未加载'); return; }
 
     const ua = navigator.userAgent.toLowerCase();
-    const is_qq = ua.includes('qq/') || ua.includes('qqguild') || window.innerWidth < 768;
+    const is_qq = ua.includes('qq/') || ua.includes('qqguild');
 
     if (!is_qq) {
       const link = document.createElement('a');
@@ -995,22 +992,16 @@ function App() {
       return;
     }
 
+    // QQ环境：加载精美的遮罩层
     const loading_mask = document.createElement('div');
     loading_mask.style.cssText = `
-      position:fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
+      position:fixed;top:0;left:0;width:100%;height:100%;
       background:rgba(0,0,0,0.82);
       backdrop-filter:blur(4px);
       -webkit-backdrop-filter:blur(4px);
       z-index:9999;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:28px;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:28px;
       font-family:system-ui,-apple-system,sans-serif;
     `;
 
@@ -1033,51 +1024,32 @@ function App() {
       </style>
 
       <div style="
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        gap:28px;
+        display:flex;flex-direction:column;align-items:center;gap:28px;
         animation:zsc_fade 0.25s ease;
       ">
+        <!-- 转圈 -->
         <div style="
-          width:40px;
-          height:40px;
-          border-radius:50%;
+          width:40px;height:40px;border-radius:50%;
           border:2px solid rgba(255,255,255,0.1);
           border-top-color:#3e8868;
           animation:zsc_spin 0.9s linear infinite;
         "></div>
 
+        <!-- 文字 -->
         <div style="text-align:center;">
-          <div style="
-            color:#fff;
-            font-size:16px;
-            font-weight:500;
-            letter-spacing:2px;
-            margin-bottom:8px;
-          ">证件制作中</div>
-          <div 
-            id="zsc_step" 
-            style="
-              color:rgba(255,255,255,0.4);
-              font-size:12px;
-              letter-spacing:1px;
-              transition:opacity 0.15s;
-            "
-          >正在校验种族信息...</div>
+          <div style="color:#fff;font-size:16px;font-weight:500;letter-spacing:2px;margin-bottom:8px;">
+            证件制作中
+          </div>
+          <div id="zsc_step" style="
+            color:rgba(255,255,255,0.4);font-size:12px;letter-spacing:1px;
+            transition:opacity 0.15s;
+          ">正在校验种族信息...</div>
         </div>
 
-        <div style="
-          width:180px;
-          height:2px;
-          background:rgba(255,255,255,0.08);
-          border-radius:999px;
-          overflow:hidden;
-        ">
+        <!-- 进度条 -->
+        <div style="width:180px;height:2px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">
           <div style="
-            height:100%;
-            background:#3e8868;
-            border-radius:999px;
+            height:100%;background:#3e8868;border-radius:999px;
             animation:zsc_progress 8s ease forwards;
           "></div>
         </div>
@@ -1086,6 +1058,7 @@ function App() {
 
     document.body.appendChild(loading_mask);
 
+  
     const steps = [
       '正在校验种族信息...',
       '能力信息备案中...',
@@ -1107,29 +1080,77 @@ function App() {
       }
     }, 500);
 
+    // 上传到 ImgBB
     canvas.toBlob(async (blob) => {
       try {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          clearInterval(step_timer);
-          if (document.body.contains(loading_mask)) {
-            document.body.removeChild(loading_mask);
-          }
+        const form_data = new FormData();
+        form_data.append('image', blob, 'card.png');
 
-          const base64 = e.target.result;
-          Fancybox.show([{ src: base64, type: 'image' }]);
-        };
-        reader.readAsDataURL(blob);
+        const res  = await fetch(`https://upload.jinninghuiguan.cn`, {
+          method: 'POST',
+          body: form_data,
+        });
+        const data = await res.json();
+
+        clearInterval(step_timer);
+        if (document.body.contains(loading_mask)) {
+          document.body.removeChild(loading_mask);
+        }
+
+        if (data.success) {
+          const img_mask = document.createElement('div');
+          img_mask.style.cssText = `
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.92);
+            backdrop-filter:blur(4px);
+            -webkit-backdrop-filter:blur(4px);
+            z-index:9999;
+            display:flex;flex-direction:column;
+            align-items:center;justify-content:center;gap:20px;
+            padding:16px;box-sizing:border-box;
+            font-family:system-ui,-apple-system,sans-serif;
+            animation:zsc_fade 0.25s ease;
+          `;
+          img_mask.innerHTML = `
+            <style>
+              @keyframes zsc_fade {
+                from { opacity:0; }
+                to   { opacity:1; }
+              }
+            </style>
+
+            <div style="color:#fff;font-size:15px;font-weight:500;letter-spacing:1px;">
+              长按图片保存
+            </div>
+
+            <img src="${data.data.url}" style="
+              max-width:100%;max-height:65vh;
+              border-radius:8px;
+              box-shadow:0 4px 24px rgba(0,0,0,0.4);
+            "/>
+
+            <button onclick="this.closest('div').remove()" style="
+              padding:10px 36px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);
+              background:transparent;color:rgba(255,255,255,0.7);
+              font-size:14px;cursor:pointer;letter-spacing:1px;
+            ">关闭</button>
+          `;
+          document.body.appendChild(img_mask);
+
+        } else {
+          throw new Error('上传失败');
+        }
       } catch (err) {
+        console.error(err);
         clearInterval(step_timer);
         if (document.body.contains(loading_mask)) {
           document.body.removeChild(loading_mask);
         }
         message.error('证件已生成，但因平台限制，请截图保存');
       }
-    });
+    }, 'image/png');
   };
-
+  
   const load_bg_from_url = (url) => {
     if (!url) {
       current_bg_ref.current = null;
